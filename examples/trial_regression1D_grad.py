@@ -1,7 +1,7 @@
 """
-Function Regression Implementation for NEAT with Gradient Descent.
+1D Function Regression Implementation for NEAT with Gradient Descent.
 
-This module extends the function regression solution based on NEAT
+This module extends the 1D function regression solution based on NEAT
 to include gradient-based parameter optimization.
 
 The hybrid approach combines:
@@ -12,8 +12,8 @@ This can lead to faster convergence and better final accuracy compared
 to pure evolutionary optimization.
 
 Classes:
-    Trial_ApproxFunction_Grad: Function approximation with gradient descent
-    Experiment_ApproxFunction_Grad: Multi-trial experiment with gradient support
+    Trial_Regression1DGrad: 1D function approximation with gradient descent
+    Experiment_Regression1DGrad: Multi-trial experiment with gradient support
 """
 
 import autograd.numpy as np  # type: ignore
@@ -26,14 +26,14 @@ from run.config     import Config
 from run.trial_grad import TrialGrad
 from run            import Experiment
 
-class Trial_RegressionGrad(TrialGrad):
+class Trial_Regression1DGrad(TrialGrad):
     """
-    NEAT trial + gradient-descent for function approximation.
-    
+    NEAT trial + gradient-descent for 1D function approximation.
+
     This trial combines NEAT's evolutionary topology search with
     gradient descent for parameter optimization. After each generation,
     the top-performing individuals receive gradient training to
-    fine-tune their weights for better function approximation.
+    fine-tune their weights for better 1D function approximation.
 
     The gradient descent minimizes MSE loss on the same sample points
     used for fitness evaluation, leading to more accurate approximations.
@@ -46,7 +46,7 @@ class Trial_RegressionGrad(TrialGrad):
                  x_max          : float,
                  suppress_output: bool = False):
         """
-        Initialize the gradient-enhanced function approximation trial.
+        Initialize the gradient-enhanced 1D function approximation trial.
 
         Parameters:
             config:          Configuration parameters (including gradient descent settings)
@@ -165,9 +165,9 @@ class Trial_RegressionGrad(TrialGrad):
         return super()._terminate()
 
 
-class Experiment_RegressionGrad(Experiment):
+class Experiment_Regression1DGrad(Experiment):
     """
-    Multi-trial experiment for gradient-enhanced function approximation.
+    Multi-trial experiment for gradient-enhanced 1D function approximation.
 
     Runs multiple independent trials and aggregates results including
     both evolutionary and gradient descent performance metrics.
@@ -180,7 +180,7 @@ class Experiment_RegressionGrad(Experiment):
                  x_min     : float,
                  x_max     : float):
         """
-        Initialize gradient-enhanced experiment.
+        Initialize gradient-enhanced 1D function approximation experiment.
 
         Parameters:
             num_trials: Number of trials to run
@@ -193,7 +193,7 @@ class Experiment_RegressionGrad(Experiment):
             Gradient descent parameters are now configured via the [GRADIENT_DESCENT]
             section in the config file, not as constructor arguments.
         """
-        super().__init__(Trial_RegressionGrad,
+        super().__init__(Trial_Regression1DGrad,
                          num_trials,
                          config,
                          function=function,
@@ -204,11 +204,11 @@ class Experiment_RegressionGrad(Experiment):
         """Reset experiment state before starting a new run."""
         super()._reset()
 
-    def _prepare_trial(self, trial: Trial_RegressionGrad, trial_number: int):
+    def _prepare_trial(self, trial: Trial_Regression1DGrad, trial_number: int):
         """Configure the experiment in preparation for the next run."""
         super()._prepare_trial(trial, trial_number)
 
-    def _extract_trial_results(self, trial: Trial_RegressionGrad, trial_number: int) -> dict:
+    def _extract_trial_results(self, trial: Trial_Regression1DGrad, trial_number: int) -> dict:
         """Extract relevant results at the end of a trial."""
         results = super()._extract_trial_results(trial, trial_number)
         return results

@@ -1,11 +1,11 @@
 """
-Function Regression Implementation for NEAT
+1D Function Regression Implementation for NEAT
 
-This module implements function approximation as a regression task for the NEAT algorithm.
+This module implements 1D function approximation as a regression task for the NEAT algorithm.
 The goal is to evolve neural networks that can approximate arbitrary 1D mathematical functions
 over a specified range.
 
-The Function Regression Problem:
+The 1D Function Regression Problem:
     Given a continuous function f(x) defined over the range [x_min, x_max], evolve a neural
     network that approximates f(x) for all x in that range. The network is evaluated on multiple
     sample points within the range.
@@ -14,12 +14,12 @@ Fitness Function:
     Fitness = 1.0 / (0.1 + MSE)
     where: MSE = mean((network_output - target)²)
 
-    Higher fitness indicates better approximation. 
+    Higher fitness indicates better approximation.
     The offset (0.1) prevents division by zero and helps with numerical stability.
 
 Classes:
-    Trial_ApproxFunction:      NEAT trial for function approximation with configurable network backend
-    Experiment_ApproxFunction: Multi-trial experiment for function approximation with statistical analysis
+    Trial_Regression1D:      NEAT trial for 1D function approximation with configurable network backend
+    Experiment_Regression1D: Multi-trial experiment for 1D function approximation with statistical analysis
 """
 
 import autograd.numpy as np  # type: ignore
@@ -33,12 +33,12 @@ from run.config import Config
 from phenotype  import Individual
 from run        import Experiment, Trial
 
-class Trial_Regression(Trial):
+class Trial_Regression1D(Trial):
     """
-    NEAT trial for function approximation with configurable network backend.
+    NEAT trial for 1D function approximation with configurable network backend.
 
     Evolves neural networks to approximate a 1D function over a specified range
-    using multiple sample points. Supports standard, autograd, and fast network 
+    using multiple sample points. Supports standard, autograd, and fast network
     backends.
 
     The trial evaluates fitness based on mean squared error (MSE) between network
@@ -53,7 +53,7 @@ class Trial_Regression(Trial):
                  x_max          : float,
                  suppress_output: bool = False):
         """
-        Initialize the function approximation trial.
+        Initialize the 1D function approximation trial.
 
         Parameters:
             config: Configuration parameters
@@ -154,9 +154,9 @@ class Trial_Regression(Trial):
         # using the default implementation.
         return super()._terminate()
 
-class Experiment_Regression(Experiment):
+class Experiment_Regression1D(Experiment):
     """
-    Multi-trial experiment for function approximation with statistical analysis.
+    Multi-trial experiment for 1D function approximation with statistical analysis.
 
     Runs multiple independent trials and aggregates results including success rate,
     average network complexity, and convergence statistics.
@@ -170,7 +170,7 @@ class Experiment_Regression(Experiment):
                  x_min         : float,
                  x_max         : float):
         """
-        Initialize function approximation experiment with multiple trials.
+        Initialize 1D function approximation experiment with multiple trials.
 
         Parameters:
             num_trials: Number of trials in this experiment
@@ -183,7 +183,7 @@ class Experiment_Regression(Experiment):
             x_min: The beginning of the range on which the function is approximated
             x_max: The end of the range on which the function is approximated
         """
-        super().__init__(Trial_Regression, num_trials, config,
+        super().__init__(Trial_Regression1D, num_trials, config,
                          network_type=network_type, function=function, x_min=x_min, x_max=x_max)
 
     def _reset(self):
@@ -192,14 +192,14 @@ class Experiment_Regression(Experiment):
         """
         super()._reset()
 
-    def _prepare_trial(self, trial: Trial_Regression, trial_number: int):
+    def _prepare_trial(self, trial: Trial_Regression1D, trial_number: int):
         """
         Configure the experiment in preparation for the next run.
         """
         # the default implementation prints a progress report.
         super()._prepare_trial(trial, trial_number)
 
-    def _extract_trial_results(self, trial: Trial_Regression, trial_number: int) -> dict:
+    def _extract_trial_results(self, trial: Trial_Regression1D, trial_number: int) -> dict:
         """
         Extract relevant results at the end of a trial.
         """
