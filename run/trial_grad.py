@@ -12,11 +12,12 @@ Classes:
     TrialGrad: Abstract base class combining NEAT evolution with gradient descent
 """
 
-from abc      import abstractmethod
-from joblib   import Parallel, delayed
-from autograd import grad    # type: ignore
-import autograd.numpy as np  # type: ignore
-from typing   import TYPE_CHECKING
+import autograd.numpy as np   # type: ignore
+from abc                      import abstractmethod
+from joblib                   import Parallel, delayed
+from autograd                 import grad   # type: ignore
+from autograd.misc.optimizers import adam   # type: ignore
+from typing                   import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from phenotype import Individual
@@ -219,6 +220,7 @@ class TrialGrad(Trial):
             else:
                 results = \
                     Parallel(num_jobs)(delayed(self._apply_gradient_descent)(i) for i in selected_individuals)
+                
                 for individual, (loss, improvement) in zip(selected_individuals, results):
                     individual.fitness = self._loss_to_fitness(loss)
                     self._gradient_improvements.append(improvement)
@@ -233,7 +235,7 @@ class TrialGrad(Trial):
         Parameters:
             individual: The individual to optimize
 
-        Returns: 
+        Returns:
             tuple: (final loss, improvement := initial_loss - final_loss)
         """
         # Get network reference
@@ -242,37 +244,45 @@ class TrialGrad(Trial):
         # Get training data
         inputs, targets = self._get_training_data()
 
-        # Create loss function parameterized by weights, biases, gains
-        # This allows autograd to compute gradients with respect to these parameters
-        def loss_fn(weights, biases, gains):
-            outputs = network.forward_pass(inputs, weights, biases, gains)
-            return self._loss_function(outputs, targets)
-
         # Get current network parameters
         weights, biases, gains = network.get_parameters()
 
-        # Track initial loss for statistics
-        initial_loss = loss_fn(weights, biases, gains)
+        # Flatten parameters for Adam optimizer
+        flat_params = np.concatenate([weights.flatten(), biases.flatten(), gains.flatten()])
+        shapes      = (weights.shape, biases.shape, gains.shape)
+        w_size      = np.prod(shapes[0])
+        b_size      = np.prod(shapes[1])
 
-        # Create gradient function using autograd
-        grad_fn = grad(loss_fn, argnum=[0, 1, 2])
+        # Loss function parameterized by flattened parameters
+        def objective(flat_params):
+            # Unflatten parameters
+            w = flat_params[:w_size].reshape(shapes[0])
+            b = flat_params[w_size:w_size + b_size].reshape(shapes[1])
+            g = flat_params[w_size + b_size:].reshape(shapes[2])
 
-        # Perform gradient descent steps
-        for _ in range(self._gradient_steps):
+            # Compute loss
+            outputs = network.forward_pass(inputs, w, b, g)
+            return self._loss_function(outputs, targets)
 
-            # Compute gradients
-            grad_w, grad_b, grad_g = grad_fn(weights, biases, gains)
+        # Track initial loss
+        initial_loss = objective(flat_params)
 
-            # Update parameters (basic SGD, can be extended to other optimizers)
-            weights = weights - self._learning_rate * grad_w
-            biases  = biases  - self._learning_rate * grad_b
-            gains   = gains   - self._learning_rate * grad_g
+        # Create gradient function and apply Adam optimizer
+        grad_fn = grad(objective)
+        optimized_params = adam(grad_fn, flat_params,
+                                num_iters=self._gradient_steps,
+                                step_size=self._learning_rate)
 
-        # Update network with optimized parameters (with bounds enforcement)
+        # Unflatten optimized parameters
+        weights = optimized_params[:w_size].reshape(shapes[0])
+        biases  = optimized_params[w_size:w_size + b_size].reshape(shapes[1])
+        gains   = optimized_params[w_size + b_size:].reshape(shapes[2])
+
+        # Update network with optimized parameters
         network.set_parameters(weights, biases, gains, enforce_bounds=True)
 
-        # Calculate and return final loss and improvement
-        final_loss  = loss_fn(weights, biases, gains)
+        # Calculate final loss and improvement
+        final_loss = objective(optimized_params)
         improvement = initial_loss - final_loss
         return final_loss, improvement
 
