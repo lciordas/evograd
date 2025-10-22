@@ -232,7 +232,8 @@ class TrialGrad(Trial):
         b_size      = np.prod(shapes[1])
 
         # Loss function parameterized by flattened parameters
-        def objective(flat_params):
+        # Note: iter parameter is required by adam optimizer but unused here
+        def objective(flat_params, _iter=None):
             # Unflatten parameters
             w = flat_params[:w_size].reshape(shapes[0])
             b = flat_params[w_size:w_size + b_size].reshape(shapes[1])

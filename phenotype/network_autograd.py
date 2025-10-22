@@ -24,8 +24,7 @@ import autograd.numpy as np  # type: ignore
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from genotype import Genome, NodeType
-
+    from genotype import Genome
 from phenotype.network_base import NetworkBase
 
 class NetworkAutograd(NetworkBase):
