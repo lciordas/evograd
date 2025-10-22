@@ -38,59 +38,36 @@ class TrialGrad(Trial):
     - _loss_to_fitness(loss): Define how to transform loss to fitness
     - _get_training_data(): Provide training data for both fitness and gradient descent
 
-    Gradient Training Configuration:
+    Gradient Training Configuration (via Config.GRADIENT_DESCENT section):
         enable_gradient:      Whether to use gradient descent (default: False)
-        gradient_steps:       Number of gradient descent steps per generation
-        learning_rate:        Learning rate for gradient updates
-        gradient_frequency:   Apply gradients every N generations (1 = every generation)
+        gradient_steps:       Number of Adam optimizer iterations per application (default: 10)
+        learning_rate:        Learning rate for Adam optimizer (default: 0.01)
+        gradient_frequency:   Apply gradients every N generations (default: 1)
         gradient_selection:   Which individuals to train ('all', 'top_k', 'top_percent')
-        gradient_top_k:       Number of top individuals to train (if selection='top_k')
-        gradient_top_percent: Percentage of top individuals (if selection='top_percent')
+        gradient_top_k:       Number of top individuals to train (default: 5)
+        gradient_top_percent: Percentage of top individuals to train (default: 0.1)
 
     Public Methods (inherited from Trial):
         run(): Execute a complete NEAT trial with optional gradient descent
     """
 
     def __init__(self,
-                 config              : Config,
-                 network_type        : str,
-                 suppress_output     : bool  = False,
-                 enable_gradient     : bool  = False,
-                 gradient_steps      : int   = 10,
-                 learning_rate       : float = 0.01,
-                 gradient_frequency  : int   = 1,
-                 gradient_selection  : str   = 'top_k',
-                 gradient_top_k      : int   = 5,
-                 gradient_top_percent: float = 0.1):
+                 config         : Config,
+                 network_type   : str,
+                 suppress_output: bool = False):
         """
         Initialize the gradient-enabled trial.
 
         Parameters:
-            config:               Configuration parameters
-            network_type:         Type of network backend ('autograd' required for gradients)
-            suppress_output:      If True, suppress progress and final reports
-            enable_gradient:      Whether to apply gradient descent
-            gradient_steps:       Number of gradient descent steps per application
-            learning_rate:        Learning rate for gradient updates
-            gradient_frequency:   Apply gradients every N generations
-            gradient_selection:   How to select individuals ('all', 'top_k', 'top_percent')
-            gradient_top_k:       Number of top individuals to train
-            gradient_top_percent: Percentage of top individuals to train
+            config:          Configuration parameters (including gradient descent settings)
+            network_type:    Type of network backend ('autograd' required for gradients)
+            suppress_output: If True, suppress progress and final reports
         """
         super().__init__(config, network_type, suppress_output)
 
         # Validate network type for gradient support
-        if enable_gradient and network_type != 'autograd':
+        if self._config.enable_gradient and network_type != 'autograd':
             raise ValueError("Gradient descent requires network_type='autograd'")
-
-        # Store gradient training parameters
-        self._enable_gradient      = enable_gradient
-        self._gradient_steps       = gradient_steps
-        self._learning_rate        = learning_rate
-        self._gradient_frequency   = gradient_frequency
-        self._gradient_selection   = gradient_selection
-        self._gradient_top_k       = gradient_top_k
-        self._gradient_top_percent = gradient_top_percent
 
         # Track fitness improvements from gradients
         self._gradient_improvements = []
@@ -204,9 +181,9 @@ class TrialGrad(Trial):
         super()._evaluate_fitness_all(num_jobs)
 
         # Pass #2: Apply gradient descent to selected individuals
-        do_gradient_descent = (self._enable_gradient and
+        do_gradient_descent = (self._config.enable_gradient and
                                self._generation_counter > 0 and
-                               self._generation_counter % self._gradient_frequency == 0)
+                               self._generation_counter % self._config.gradient_frequency == 0)
         selected_individuals = self._select_individuals_for_gradient() if do_gradient_descent else []
         do_gradient_descent  = do_gradient_descent and selected_individuals
 
@@ -270,8 +247,8 @@ class TrialGrad(Trial):
         # Create gradient function and apply Adam optimizer
         grad_fn = grad(objective)
         optimized_params = adam(grad_fn, flat_params,
-                                num_iters=self._gradient_steps,
-                                step_size=self._learning_rate)
+                                num_iters=self._config.gradient_steps,
+                                step_size=self._config.learning_rate)
 
         # Unflatten optimized parameters
         weights = optimized_params[:w_size].reshape(shapes[0])
@@ -286,7 +263,7 @@ class TrialGrad(Trial):
         improvement = initial_loss - final_loss
         return final_loss, improvement
 
-    def _select_individuals_for_gradient(self) -> list[Individual]:
+    def _select_individuals_for_gradient(self) -> list["Individual"]:
         """
         Select which individuals should receive gradient descent training.
 
@@ -295,24 +272,24 @@ class TrialGrad(Trial):
         """
         individuals = self._population.individuals
 
-        if self._gradient_selection == 'all':
+        if self._config.gradient_selection == 'all':
             return individuals
 
-        elif self._gradient_selection == 'top_k':
+        elif self._config.gradient_selection == 'top_k':
             sorted_individuals = sorted(individuals,
                                        key=lambda x: x.fitness,
                                        reverse=True)
-            return sorted_individuals[:self._gradient_top_k]
+            return sorted_individuals[:self._config.gradient_top_k]
 
-        elif self._gradient_selection == 'top_percent':
+        elif self._config.gradient_selection == 'top_percent':
             sorted_individuals = sorted(individuals,
                                        key=lambda x: x.fitness,
                                        reverse=True)
-            num_to_select = max(1, int(len(individuals) * self._gradient_top_percent))
+            num_to_select = max(1, int(len(individuals) * self._config.gradient_top_percent))
             return sorted_individuals[:num_to_select]
 
         else:
-            raise ValueError(f"Unknown gradient_selection: {self._gradient_selection}")
+            raise ValueError(f"Unknown gradient_selection: {self._config.gradient_selection}")
 
     def _report_gradient_statistics(self):
         """

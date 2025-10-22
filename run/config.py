@@ -21,8 +21,11 @@ class Config:
         parser = configparser.ConfigParser()
         parser.read(config_file)
 
+        # Sentinel for missing default values
+        _NO_DEFAULT = object()
+
         # Helper function to safely parse values
-        def get_value(section, key, value_type, default=None):
+        def get_value(section, key, value_type, default=_NO_DEFAULT):
             try:
                 raw_value = parser.get(section, key)
                 if raw_value.lower() == 'none':
@@ -36,7 +39,7 @@ class Config:
                 elif value_type == str:
                     return raw_value
             except (configparser.NoSectionError, configparser.NoOptionError):
-                if default is not None:
+                if default is not _NO_DEFAULT:
                     return default
                 raise
 
@@ -145,9 +148,9 @@ class Config:
 
         # The mean and standard deviation of the normal distributions
         # used to initialize the 'bias' & 'gain' parameters for new nodes.
-        self.bias_init_mean = get_value('NODE', 'bias_init_mean', float)
+        self.bias_init_mean  = get_value('NODE', 'bias_init_mean' , float)
         self.bias_init_stdev = get_value('NODE', 'bias_init_stdev', float)
-        self.gain_init_mean = get_value('NODE', 'gain_init_mean', float)
+        self.gain_init_mean  = get_value('NODE', 'gain_init_mean' , float)
         self.gain_init_stdev = get_value('NODE', 'gain_init_stdev', float)
 
         # The minimum and maximum allowed 'bias' and 'gain' values.
@@ -176,7 +179,7 @@ class Config:
 
         # The mean and standard deviation of the normal distribution
         # used to initialize the 'weight' parameter for new connections.
-        self.weight_init_mean = get_value('CONNECTION', 'weight_init_mean', float)
+        self.weight_init_mean  = get_value('CONNECTION', 'weight_init_mean' , float)
         self.weight_init_stdev = get_value('CONNECTION', 'weight_init_stdev', float)
 
         # The minimum and maximum allowed 'weight' values.
@@ -216,7 +219,7 @@ class Config:
 
         # The probability that a mutation will enabled a currently
         # disabled connection, or the other way around.
-        self.connection_enable_probability = get_value('STRUCTURAL_MUTATIONS', 'connection_enable_probability', float)
+        self.connection_enable_probability  = get_value('STRUCTURAL_MUTATIONS', 'connection_enable_probability' , float)
         self.connection_disable_probability = get_value('STRUCTURAL_MUTATIONS', 'connection_disable_probability', float)
 
         # The probability that mutation will delete an existing connection (irrespective of
@@ -224,4 +227,28 @@ class Config:
         # This goes a bit against the original NEAT approach, which disables rather than delete
         # connections, so keep its value to 0 unless you have a good reason not to).
         self.connection_delete_probability = get_value('STRUCTURAL_MUTATIONS', 'connection_delete_probability', float)
-        
+
+        # [GRADIENT DESCENT] (optional section)
+
+        # Whether to apply gradient descent optimization to individuals.
+        self.enable_gradient = get_value('GRADIENT_DESCENT', 'enable_gradient', bool, default=False)
+
+        # Number of gradient descent steps per application.
+        self.gradient_steps = get_value('GRADIENT_DESCENT', 'gradient_steps', int, default=10)
+
+        # Learning rate for gradient updates (step size for Adam optimizer).
+        self.learning_rate = get_value('GRADIENT_DESCENT', 'learning_rate', float, default=0.01)
+
+        # Apply gradients every N generations (1 = every generation).
+        self.gradient_frequency = get_value('GRADIENT_DESCENT', 'gradient_frequency', int, default=1)
+
+        # Which individuals to train with gradient descent.
+        # Allowed values: 'all', 'top_k', 'top_percent'
+        self.gradient_selection = get_value('GRADIENT_DESCENT', 'gradient_selection', str, default='top_k')
+
+        # Number of top individuals to train (only applicable if gradient_selection='top_k').
+        self.gradient_top_k = get_value('GRADIENT_DESCENT', 'gradient_top_k', int, default=5)
+
+        # Percentage of top individuals to train (only applicable if gradient_selection='top_percent').
+        self.gradient_top_percent = get_value('GRADIENT_DESCENT', 'gradient_top_percent', float, default=0.1)
+    
