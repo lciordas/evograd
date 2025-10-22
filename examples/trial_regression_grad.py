@@ -41,42 +41,28 @@ class Trial_RegressionGrad(TrialGrad):
 
     def __init__(self,
                  config: Config,
-                 function          : Callable[[float], float],
-                 x_min             : float,
-                 x_max             : float,
-                 suppress_output   : bool = False,
-                 enable_gradient   : bool = True,
-                 gradient_steps    : int = 20,
-                 learning_rate     : float = 0.1,
-                 gradient_frequency: int = 5,
-                 gradient_selection: str = 'top_k',
-                 gradient_top_k    : int = 10):
+                 function       : Callable[[float], float],
+                 x_min          : float,
+                 x_max          : float,
+                 suppress_output: bool = False):
         """
         Initialize the gradient-enhanced function approximation trial.
 
         Parameters:
-            config:             Configuration parameters
-            function:           The 1D function being approximated
-            x_min:              Beginning of approximation range
-            x_max:              End of approximation range
-            suppress_output:    If True, suppress progress reports
-            enable_gradient:    Whether to use gradient descent
-            gradient_steps:     Number of SGD steps per application
-            learning_rate:      Learning rate for gradient updates
-            gradient_frequency: Apply gradients every N generations
-            gradient_selection: How to select individuals for training
-            gradient_top_k:     Number of top individuals to train
+            config:          Configuration parameters (including gradient descent settings)
+            function:        The 1D function being approximated
+            x_min:           Beginning of approximation range
+            x_max:           End of approximation range
+            suppress_output: If True, suppress progress reports
+
+        Note:
+            Gradient descent parameters are now configured via the [GRADIENT_DESCENT]
+            section in the config file, not as constructor arguments.
         """
         super().__init__(
             config=config,
-            network_type='autograd', # must use 'autograd' network type for gradient support
-            suppress_output=suppress_output,
-            enable_gradient=enable_gradient,
-            gradient_steps=gradient_steps,
-            learning_rate=learning_rate,
-            gradient_frequency=gradient_frequency,
-            gradient_selection=gradient_selection,
-            gradient_top_k=gradient_top_k
+            network_type='autograd',  # must use 'autograd' network type for gradient support
+            suppress_output=suppress_output
         )
 
         # Generate sample points for function approximation
@@ -141,7 +127,7 @@ class Trial_RegressionGrad(TrialGrad):
             s += f"maximum fitness = {fittest.fitness:.4f}\n"
 
             # Add gradient statistics if enabled
-            if self._enable_gradient and self._gradient_improvements:
+            if self._config.enable_gradient and self._gradient_improvements:
                 s += self._report_gradient_statistics()
 
             s += '\n'
@@ -158,7 +144,7 @@ class Trial_RegressionGrad(TrialGrad):
         individual_fittest = self._population.get_fittest_individual().prune()
 
         # Report gradient training summary
-        if self._enable_gradient and self._gradient_improvements:
+        if self._config.enable_gradient and self._gradient_improvements:
             print("\n" + "=" * 50)
             print("GRADIENT DESCENT SUMMARY")
             print("=" * 50)
@@ -188,50 +174,58 @@ class Experiment_RegressionGrad(Experiment):
     """
 
     def __init__(self,
-                 num_trials        : int,
-                 config            : Config,
-                 function          : Callable[[float], float],
-                 x_min             : float,
-                 x_max             : float,
-                 enable_gradient   : bool = True,
-                 gradient_steps    : int = 20,
-                 learning_rate     : float = 0.1,
-                 gradient_frequency: int = 5,
-                 gradient_selection: str = 'top_k',
-                 gradient_top_k    : int = 10):
+                 num_trials: int,
+                 config    : Config,
+                 function  : Callable[[float], float],
+                 x_min     : float,
+                 x_max     : float):
         """
         Initialize gradient-enhanced experiment.
 
         Parameters:
-            num_trials:         Number of trials to run
-            config:             Configuration parameters
-            function:           The 1D function to approximate
-            x_min:              Beginning of approximation range
-            x_max:              End of approximation range
-            enable_gradient:    Whether to use gradient descent
-            gradient_steps:     Number of SGD steps per application
-            learning_rate:      Learning rate for gradient updates
-            gradient_frequency: Apply gradients every N generations
-            gradient_selection: How to select individuals for training
-            gradient_top_k:     Number of top individuals to train
-        """
-        # Store gradient parameters for trial creation
-        self._gradient_params = {
-            'enable_gradient'   : enable_gradient,
-            'gradient_steps'    : gradient_steps,
-            'learning_rate'     : learning_rate,
-            'gradient_frequency': gradient_frequency,
-            'gradient_selection': gradient_selection,
-            'gradient_top_k'    : gradient_top_k
-        }
+            num_trials: Number of trials to run
+            config:     Configuration parameters (including gradient descent settings)
+            function:   The 1D function to approximate
+            x_min:      Beginning of approximation range
+            x_max:      End of approximation range
 
+        Note:
+            Gradient descent parameters are now configured via the [GRADIENT_DESCENT]
+            section in the config file, not as constructor arguments.
+        """
         super().__init__(Trial_RegressionGrad,
-                         num_trials, 
+                         num_trials,
                          config,
                          function=function,
                          x_min=x_min,
-                         x_max=x_max,
-                       **self._gradient_params)
+                         x_max=x_max)
+
+    def _reset(self):
+        """Reset experiment state before starting a new run."""
+        super()._reset()
+
+    def _prepare_trial(self, trial: Trial_RegressionGrad, trial_number: int):
+        """Configure the experiment in preparation for the next run."""
+        super()._prepare_trial(trial, trial_number)
+
+    def _extract_trial_results(self, trial: Trial_RegressionGrad, trial_number: int) -> dict:
+        """Extract relevant results at the end of a trial."""
+        results = super()._extract_trial_results(trial, trial_number)
+        return results
+
+    def _analyze_trial_results(self, results: dict):
+        """Extract results of each trial, once complete."""
+        # Call parent class method to populate statistics lists
+        super()._analyze_trial_results(results)
+
+        # Print trial summary
+        s  = f"Trial {results['trial_number']:03d}: "
+        s += f"max fitness={results['max_fitness']:5.2f}, "
+        s += f"neurons={results['number_neurons']:2}, "
+        s += f"connections={results['number_connections']:3}, "
+        s += f"generations={results['number_generations']:3} "
+        s += "[SUCCESS]" if results['success'] else "[FAILED]"
+        print(s)
 
     def _final_report(self):
         """
@@ -241,12 +235,13 @@ class Experiment_RegressionGrad(Experiment):
         super()._final_report()
 
         # Add gradient-specific statistics if enabled
-        if self._gradient_params['enable_gradient']:
+        if self._config.enable_gradient:
             print("\nGRADIENT DESCENT IMPACT:")
-            print(f"  Gradient descent was {'ENABLED' if self._gradient_params['enable_gradient'] else 'DISABLED'}")
-            print(f"  Learning rate:      {self._gradient_params['learning_rate']}")
-            print(f"  Steps per update:   {self._gradient_params['gradient_steps']}")
-            print(f"  Update frequency:   Every {self._gradient_params['gradient_frequency']} generations")
-            print(f"  Selection strategy: {self._gradient_params['gradient_selection']}")
-            if self._gradient_params['gradient_selection'] == 'top_k':
-                print(f"  Top K individuals:  {self._gradient_params['gradient_top_k']}")
+            print(f"  Gradient descent was {'ENABLED' if self._config.enable_gradient else 'DISABLED'}")
+            print(f"  Learning rate:      {self._config.learning_rate}")
+            print(f"  Steps per update:   {self._config.gradient_steps}")
+            print(f"  Update frequency:   Every {self._config.gradient_frequency} generations")
+            print(f"  Selection strategy: {self._config.gradient_selection}")
+            if self._config.gradient_selection == 'top_k':
+                print(f"  Top K individuals:  {self._config.gradient_top_k}")
+            print(f"  Lamarckian evolution: {'ENABLED' if self._config.lamarckian_evolution else 'DISABLED'}")
