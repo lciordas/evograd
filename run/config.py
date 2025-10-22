@@ -251,4 +251,10 @@ class Config:
 
         # Percentage of top individuals to train (only applicable if gradient_selection='top_percent').
         self.gradient_top_percent = get_value('GRADIENT_DESCENT', 'gradient_top_percent', float, default=0.1)
+
+        # Whether to save gradient-optimized parameters back to the genome (Lamarckian evolution).
+        # If True, parameters learned through gradient descent are written back to the genome
+        # and can be inherited by offspring. If False, gradient descent only affects fitness
+        # evaluation but learned parameters are not inherited (Baldwin effect).
+        self.lamarckian_evolution = get_value('GRADIENT_DESCENT', 'lamarckian_evolution', bool, default=False)
     

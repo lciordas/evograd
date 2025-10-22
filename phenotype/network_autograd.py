@@ -44,6 +44,9 @@ class NetworkAutograd(NetworkBase):
         set_parameters(weights, biases, gains, enforce_bounds=True):
             Update network parameters with optional bounds enforcement
 
+        save_parameters_to_genome(enforce_bounds=True):
+            Save current network parameters back into the genome (Lamarckian evolution)
+
     Public Properties (inherited from NetworkBase):
         number_nodes:               Total number of nodes in the network
         number_nodes_hidden:        Number of hidden nodes in the network
@@ -275,6 +278,55 @@ class NetworkAutograd(NetworkBase):
         outputs = np.column_stack([node_values_list[idx] for idx in self._output_indices])
 
         return outputs
+
+    def save_parameters_to_genome(self, enforce_bounds=True):
+        """
+        Save current network parameters back into the genome (Lamarckian evolution).
+
+        This method updates the genome's node and connection genes with the current
+        network parameters, allowing gradient-descent-optimized parameters to be
+        inherited by offspring through crossover and passed to future generations.
+
+        This implements Lamarckian evolution: acquired characteristics (parameters
+        learned through gradient descent) can be inherited, unlike purely Darwinian
+        evolution where only random mutations and selection occur.
+
+        Parameters:
+            enforce_bounds: If True, clip parameters to config bounds before saving (default: True)
+
+        Note:
+            Only updates parameter values (weights, biases, gains). Network topology
+            (connections, nodes) is never modified by this method.
+        """
+        weights = self.weights
+        biases  = self.biases
+        gains   = self.gains
+
+        # Optionally enforce parameter bounds
+        if enforce_bounds:
+            config  = self._genome._config
+            weights = np.clip(weights, config.min_weight, config.max_weight)
+            biases  = np.clip(biases , config.min_bias  , config.max_bias)
+            gains   = np.clip(gains  , config.min_gain  , config.max_gain)
+
+        # Update node genes (biases and gains)
+        for idx in range(self._num_nodes):
+            node_id   = self._idx_to_node_id[idx]
+            node_gene = self._genome.node_genes[node_id]
+
+            # Convert numpy types to Python native types for cleaner storage
+            node_gene.bias = float(biases[idx])
+            node_gene.gain = float(gains[idx])
+
+        # Update connection genes (weights)
+        # Iterate through all connections in the genome
+        for conn_gene in self._genome.conn_genes.values():
+            if conn_gene.enabled:
+                from_idx = self._node_id_to_idx[conn_gene.node_in]
+                to_idx   = self._node_id_to_idx[conn_gene.node_out]
+
+                # Update weight from the weight matrix
+                conn_gene.weight = float(weights[from_idx, to_idx])
 
     def __str__(self):
         """String representation showing network structure."""

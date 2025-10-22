@@ -46,6 +46,7 @@ class TrialGrad(Trial):
         gradient_selection:   Which individuals to train ('all', 'top_k', 'top_percent')
         gradient_top_k:       Number of top individuals to train (default: 5)
         gradient_top_percent: Percentage of top individuals to train (default: 0.1)
+        lamarckian_evolution: Save optimized parameters to genome for inheritance (default: False)
 
     Public Methods (inherited from Trial):
         run(): Execute a complete NEAT trial with optional gradient descent
@@ -257,6 +258,10 @@ class TrialGrad(Trial):
 
         # Update network with optimized parameters
         network.set_parameters(weights, biases, gains, enforce_bounds=True)
+
+        # Save optimized parameters back to genome if Lamarckian evolution is enabled
+        if self._config.lamarckian_evolution:
+            network.save_parameters_to_genome(enforce_bounds=True)
 
         # Calculate final loss and improvement
         final_loss = objective(optimized_params)
