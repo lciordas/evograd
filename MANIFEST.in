@@ -2,11 +2,11 @@ include README.md
 include LICENSE
 include requirements.txt
 include requirements-dev.txt
-recursive-include neat *.py
+recursive-include src/neat *.py
 recursive-include configs *.ini
 recursive-include docs *.md
 recursive-include tests *.py
 prune tests/__pycache__
-prune neat/__pycache__
+prune src/neat/__pycache__
 global-exclude *.py[co]
 global-exclude __pycache__

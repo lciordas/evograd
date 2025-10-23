@@ -65,7 +65,10 @@ all = ["neat-python[dev,examples]"]
 neat-run = "neat.cli:main"
 
 [tool.setuptools]
-packages = ["neat"]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.setuptools.package-data]
 neat = ["py.typed"]
@@ -106,7 +109,7 @@ python_classes = "Test*"
 python_functions = "test_*"
 
 [tool.coverage.run]
-source = ["neat"]
+source = ["src/neat"]
 omit = [
     "*/tests/*",
     "*/test_*.py",
