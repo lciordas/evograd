@@ -41,3 +41,6 @@ ENV/
 
 # Generated files
 *.pdf
+
+# Configuration files
+*.ini
