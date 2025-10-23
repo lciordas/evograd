@@ -194,6 +194,9 @@ class TrialGrad(Trial):
         do_gradient_descent  = do_gradient_descent and selected_individuals
 
         if do_gradient_descent:
+            # Clear gradient data from previous generations to avoid stale reporting
+            # Only keep data for individuals being optimized in THIS generation
+            self._gradient_data = {}
 
             # Store pre-GD fitness for all selected individuals
             fitness_before_gd = {ind.ID: ind.fitness for ind in selected_individuals}
