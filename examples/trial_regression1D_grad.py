@@ -114,7 +114,7 @@ class Trial_Regression1DGrad(TrialGrad):
         """
         Display progress including gradient descent statistics.
         """
-        display_progress = (self._generation_counter % 20 == 1) or self._terminate()
+        display_progress = (self._generation_counter % 1 == 0) or self._terminate()
 
         if display_progress:
             fittest = self._population.get_fittest_individual()
@@ -127,13 +127,27 @@ class Trial_Regression1DGrad(TrialGrad):
             s += f"maximum fitness = {fittest.fitness:.4f}\n"
 
             # Add gradient statistics if enabled
-            if self._config.enable_gradient and self._gradient_improvements:
+            if self._config.enable_gradient and self._gradient_data:
                 s += self._report_gradient_statistics()
 
             s += '\n'
-            s += "Fittest Individual:\n"
-            s += str(fittest)
-            s += '\n'
+
+            # Print all individuals
+            s += "All Individuals:\n"
+            s += "-" * 50 + "\n"
+            for idx, individual in enumerate(self._population.individuals, 1):
+                pruned = individual.prune()
+
+                # Check if this individual received gradient descent
+                grad_data = self._gradient_data.get(individual.ID)
+                if grad_data:
+                    s += f"\nIndividual {idx} (fitness: {grad_data['fitness_before_sgd']:.4f} -> {grad_data['fitness_after_sgd']:.4f}, "
+                    s += f"improvement: {grad_data['fitness_improvement']:.4f}):\n"
+                else:
+                    s += f"\nIndividual {idx} (fitness: {individual.fitness:.4f}):\n"
+
+                s += str(pruned)
+                s += '\n'
 
             print(s)
 
@@ -144,13 +158,19 @@ class Trial_Regression1DGrad(TrialGrad):
         individual_fittest = self._population.get_fittest_individual().prune()
 
         # Report gradient training summary
-        if self._config.enable_gradient and self._gradient_improvements:
+        if self._config.enable_gradient and self._gradient_data:
+            # Extract loss and fitness improvements from gradient data dict
+            loss_improvements = [data['loss_improvement'] for data in self._gradient_data.values()]
+            fitness_improvements = [data['fitness_improvement'] for data in self._gradient_data.values()]
+
             print("\n" + "=" * 50)
             print("GRADIENT DESCENT SUMMARY")
             print("=" * 50)
-            print(f"Total gradient steps applied: {len(self._gradient_improvements)}")
-            print(f"Average loss improvement:      {np.mean(self._gradient_improvements):.6f}")
-            print(f"Total loss improvement:        {np.sum(self._gradient_improvements):.6f}")
+            print(f"Total gradient steps applied:  {len(self._gradient_data)}")
+            print(f"Average loss improvement:      {np.mean(loss_improvements):.6f}")
+            print(f"Total loss improvement:        {np.sum(loss_improvements):.6f}")
+            print(f"Average fitness improvement:   {np.mean(fitness_improvements):.6f}")
+            print(f"Total fitness improvement:     {np.sum(fitness_improvements):.6f}")
             print()
 
         # Visualize the network

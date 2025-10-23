@@ -50,6 +50,12 @@ class TrialGrad(Trial):
 
     Public Methods (inherited from Trial):
         run(): Execute a complete NEAT trial with optional gradient descent
+
+    Internal Attributes:
+        _gradient_data: Dict mapping individual ID to gradient descent statistics
+                       Structure: {individual_id: {'fitness_before_sgd', 'fitness_after_sgd',
+                                   'fitness_improvement', 'loss_before_sgd', 'loss_after_sgd',
+                                   'loss_improvement', 'generation'}}
     """
 
     def __init__(self,
@@ -70,8 +76,8 @@ class TrialGrad(Trial):
         if self._config.enable_gradient and network_type != 'autograd':
             raise ValueError("Gradient descent requires network_type='autograd'")
 
-        # Track fitness improvements from gradients
-        self._gradient_improvements = []
+        # Track gradient descent data per individual
+        self._gradient_data = {}  # Dict[int, dict] - key: individual.ID
 
     @abstractmethod
     def _loss_function(self,
@@ -145,7 +151,7 @@ class TrialGrad(Trial):
     def _reset(self):
         """Reset trial state."""
         super()._reset()
-        self._gradient_improvements = []
+        self._gradient_data = {}
 
     def _evaluate_fitness(self, individual: "Individual") -> float:
         """
@@ -192,21 +198,51 @@ class TrialGrad(Trial):
             serialize = (num_jobs == 1)
             if serialize:
                 for individual in selected_individuals:
-                    loss, improvement  = self._apply_gradient_descent(individual)
-                    individual.fitness = self._loss_to_fitness(loss)
-                    self._gradient_improvements.append(improvement)
+                    # Store pre-SGD fitness
+                    fitness_before = individual.fitness
+
+                    # Apply gradient descent
+                    loss_after, loss_improvement, fitness_improvement = self._apply_gradient_descent(individual)
+                    fitness_after = self._loss_to_fitness(loss_after)
+                    individual.fitness = fitness_after
+
+                    # Store gradient data for this individual
+                    self._gradient_data[individual.ID] = {
+                        'fitness_before_sgd': fitness_before,
+                        'fitness_after_sgd': fitness_after,
+                        'fitness_improvement': fitness_improvement,
+                        'loss_before_sgd': loss_after + loss_improvement,  # reconstruct from improvement
+                        'loss_after_sgd': loss_after,
+                        'loss_improvement': loss_improvement,
+                        'generation': self._generation_counter
+                    }
             else:
+                # Store pre-SGD fitness for all selected individuals
+                fitness_before_map = {ind.ID: ind.fitness for ind in selected_individuals}
+
+                # Apply gradient descent in parallel
                 results = \
                     Parallel(num_jobs)(delayed(self._apply_gradient_descent)(i) for i in selected_individuals)
-                
-                for individual, (loss, improvement) in zip(selected_individuals, results):
-                    individual.fitness = self._loss_to_fitness(loss)
-                    self._gradient_improvements.append(improvement)
+
+                for individual, (loss_after, loss_improvement, fitness_improvement) in zip(selected_individuals, results):
+                    fitness_after = self._loss_to_fitness(loss_after)
+                    individual.fitness = fitness_after
+
+                    # Store gradient data for this individual
+                    self._gradient_data[individual.ID] = {
+                        'fitness_before_sgd': fitness_before_map[individual.ID],
+                        'fitness_after_sgd': fitness_after,
+                        'fitness_improvement': fitness_improvement,
+                        'loss_before_sgd': loss_after + loss_improvement,
+                        'loss_after_sgd': loss_after,
+                        'loss_improvement': loss_improvement,
+                        'generation': self._generation_counter
+                    }
 
             # Update species fitness after gradient improvements
             self._population._species_manager.update_fitness()
 
-    def _apply_gradient_descent(self, individual: "Individual") -> tuple[float, float]:
+    def _apply_gradient_descent(self, individual: "Individual") -> tuple[float, float, float]:
         """
         Apply gradient descent to optimize an individual's network parameters.
 
@@ -214,7 +250,10 @@ class TrialGrad(Trial):
             individual: The individual to optimize
 
         Returns:
-            tuple: (final loss, improvement := initial_loss - final_loss)
+            tuple: (final_loss, loss_improvement, fitness_improvement)
+                - final_loss: Loss after gradient descent
+                - loss_improvement: initial_loss - final_loss
+                - fitness_improvement: final_fitness - initial_fitness
         """
         # Get network reference
         network = individual._network
@@ -243,8 +282,9 @@ class TrialGrad(Trial):
             outputs = network.forward_pass(inputs, w, b, g)
             return self._loss_function(outputs, targets)
 
-        # Track initial loss
+        # Track initial loss and fitness
         initial_loss = objective(flat_params)
+        initial_fitness = self._loss_to_fitness(initial_loss)
 
         # Create gradient function and apply Adam optimizer
         grad_fn = grad(objective)
@@ -264,10 +304,15 @@ class TrialGrad(Trial):
         if self._config.lamarckian_evolution:
             network.save_parameters_to_genome(enforce_bounds=True)
 
-        # Calculate final loss and improvement
+        # Calculate final loss and fitness
         final_loss = objective(optimized_params)
-        improvement = initial_loss - final_loss
-        return final_loss, improvement
+        final_fitness = self._loss_to_fitness(final_loss)
+
+        # Calculate improvements
+        loss_improvement = initial_loss - final_loss
+        fitness_improvement = final_fitness - initial_fitness
+
+        return final_loss, loss_improvement, fitness_improvement
 
     def _select_individuals_for_gradient(self) -> list["Individual"]:
         """
@@ -304,14 +349,10 @@ class TrialGrad(Trial):
         This method can be called from _report_progress() to display
         gradient training statistics.
         """
-        if self._gradient_improvements:
-            avg_improvement = np.mean(self._gradient_improvements[-10:])  # Last 10
-            total_improvement = np.sum(self._gradient_improvements)
-
-            s  = f"  Gradient Descent Statistics:\n"
-            s += f"    Recent avg improvement: {avg_improvement:.6f}\n"
-            s += f"    Total improvement:      {total_improvement:.6f}\n"
-            s += f"    Gradient steps applied: {len(self._gradient_improvements)}\n"
-
+        if self._gradient_data:
+            # Extract fitness improvements from gradient data dict
+            fitness_improvements = [data['fitness_improvement'] for data in self._gradient_data.values()]
+            avg_fitness_improvement = np.mean(fitness_improvements)
+            s = f"Avg fitness improvement due to gradient descent: {avg_fitness_improvement:.6f}\n"
             return s
         return ""

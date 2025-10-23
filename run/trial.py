@@ -93,6 +93,10 @@ class Trial(ABC):
         # Evaluate the fitness of the initial population
         self._evaluate_fitness_all(num_jobs)
 
+        # Display progress for the initial population
+        if not self._suppress_output:
+            self._report_progress()
+
         # Evolution loop
         while not self._terminate():
             self._generation_counter += 1
