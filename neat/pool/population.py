@@ -83,7 +83,7 @@ class Population:
         For each network, connect one random input node to all outputs nodes.
         """
         # Import here to avoid circular import
-        from genotype import ConnectionGene, InnovationTracker
+        from neat.genotype import ConnectionGene, InnovationTracker
 
         # Add connections to each Individual's network.
         for individual in self.individuals:
@@ -106,7 +106,7 @@ class Population:
         The connections are chosen at random.
         """
         # Import here to avoid circular import
-        from genotype import ConnectionGene, InnovationTracker
+        from neat.genotype import ConnectionGene, InnovationTracker
 
         # Add connections to each Individual's network.
         for individual in self.individuals:
@@ -130,7 +130,7 @@ class Population:
         For each network, connect all inputs nodes to all output nodes.
         """
         # Import here to avoid circular import
-        from genotype import ConnectionGene, InnovationTracker
+        from neat.genotype import ConnectionGene, InnovationTracker
 
         # Add connections to each Individual's network.
         for individual in self.individuals:

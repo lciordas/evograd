@@ -110,7 +110,7 @@ class NetworkAutograd(NetworkBase):
         self._activation_names = activation_names
 
         # Store activation functions by index for runtime use
-        from activations import activations
+        from neat.activations import activations
         self._activations = [activations[name] for name in activation_names]
 
         # Convert input/output IDs to indices
