@@ -53,8 +53,8 @@ class TrialGrad(Trial):
 
     Internal Attributes:
         _gradient_data: Dict mapping individual ID to gradient descent statistics
-                       Structure: {individual_id: {'fitness_before_sgd', 'fitness_after_sgd',
-                                   'fitness_improvement', 'loss_before_sgd', 'loss_after_sgd',
+                       Structure: {individual_id: {'fitness_before_gd', 'fitness_after_gd',
+                                   'fitness_improvement', 'loss_before_gd', 'loss_after_gd',
                                    'loss_improvement', 'generation'}}
     """
 
@@ -189,54 +189,53 @@ class TrialGrad(Trial):
 
         # Pass #2: Apply gradient descent to selected individuals
         do_gradient_descent = (self._config.enable_gradient and
-                               self._generation_counter > 0 and
                                self._generation_counter % self._config.gradient_frequency == 0)
         selected_individuals = self._select_individuals_for_gradient() if do_gradient_descent else []
         do_gradient_descent  = do_gradient_descent and selected_individuals
 
         if do_gradient_descent:
+
+            # Store pre-GD fitness for all selected individuals
+            fitness_before_gd = {ind.ID: ind.fitness for ind in selected_individuals}
+
             serialize = (num_jobs == 1)
             if serialize:
                 for individual in selected_individuals:
-                    # Store pre-SGD fitness
-                    fitness_before = individual.fitness
 
-                    # Apply gradient descent
-                    loss_after, loss_improvement, fitness_improvement = self._apply_gradient_descent(individual)
-                    fitness_after = self._loss_to_fitness(loss_after)
-                    individual.fitness = fitness_after
+                    # Apply gradient descent to one individual
+                    loss_final, loss_improvement, fitness_improvement = self._apply_gradient_descent(individual)
+                    fitness_final      = self._loss_to_fitness(loss_final)
+                    individual.fitness = fitness_final
 
                     # Store gradient data for this individual
                     self._gradient_data[individual.ID] = {
-                        'fitness_before_sgd': fitness_before,
-                        'fitness_after_sgd': fitness_after,
+                        'fitness_before_gd'  : fitness_before_gd[individual.ID],
+                        'fitness_after_gd'   : fitness_final,
                         'fitness_improvement': fitness_improvement,
-                        'loss_before_sgd': loss_after + loss_improvement,  # reconstruct from improvement
-                        'loss_after_sgd': loss_after,
-                        'loss_improvement': loss_improvement,
-                        'generation': self._generation_counter
+                        'loss_before_gd'     : loss_final + loss_improvement,  
+                        'loss_after_gd'      : loss_final,
+                        'loss_improvement'   : loss_improvement,
+                        'generation'         : self._generation_counter
                     }
             else:
-                # Store pre-SGD fitness for all selected individuals
-                fitness_before_map = {ind.ID: ind.fitness for ind in selected_individuals}
 
-                # Apply gradient descent in parallel
+                # Apply gradient descent to all individuals in parallel
                 results = \
                     Parallel(num_jobs)(delayed(self._apply_gradient_descent)(i) for i in selected_individuals)
 
-                for individual, (loss_after, loss_improvement, fitness_improvement) in zip(selected_individuals, results):
-                    fitness_after = self._loss_to_fitness(loss_after)
-                    individual.fitness = fitness_after
+                for individual, (loss_final, loss_improvement, fitness_improvement) in zip(selected_individuals, results):
+                    fitness_final      = self._loss_to_fitness(loss_final)
+                    individual.fitness = fitness_final
 
                     # Store gradient data for this individual
                     self._gradient_data[individual.ID] = {
-                        'fitness_before_sgd': fitness_before_map[individual.ID],
-                        'fitness_after_sgd': fitness_after,
+                        'fitness_before_gd'  : fitness_before_gd[individual.ID],
+                        'fitness_after_gd'   : fitness_final,
                         'fitness_improvement': fitness_improvement,
-                        'loss_before_sgd': loss_after + loss_improvement,
-                        'loss_after_sgd': loss_after,
-                        'loss_improvement': loss_improvement,
-                        'generation': self._generation_counter
+                        'loss_before_gd'     : loss_final + loss_improvement,
+                        'loss_after_gd'      : loss_final,
+                        'loss_improvement'   : loss_improvement,
+                        'generation'         : self._generation_counter
                     }
 
             # Update species fitness after gradient improvements
@@ -346,11 +345,10 @@ class TrialGrad(Trial):
         """
         Report statistics about gradient descent performance.
 
-        This method can be called from _report_progress() to display
-        gradient training statistics.
+        This method can be called from _report_progress() to 
+        display gradient training statistics.
         """
         if self._gradient_data:
-            # Extract fitness improvements from gradient data dict
             fitness_improvements = [data['fitness_improvement'] for data in self._gradient_data.values()]
             avg_fitness_improvement = np.mean(fitness_improvements)
             s = f"Avg fitness improvement due to gradient descent: {avg_fitness_improvement:.6f}\n"

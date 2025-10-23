@@ -40,7 +40,7 @@ class Trial_Regression1DGrad(TrialGrad):
     """
 
     def __init__(self,
-                 config: Config,
+                 config         : Config,
                  function       : Callable[[float], float],
                  x_min          : float,
                  x_max          : float,
@@ -126,22 +126,18 @@ class Trial_Regression1DGrad(TrialGrad):
             s += f"number species  = {len(self._population._species_manager.species)}\n"
             s += f"maximum fitness = {fittest.fitness:.4f}\n"
 
-            # Add gradient statistics if enabled
-            if self._config.enable_gradient and self._gradient_data:
-                s += self._report_gradient_statistics()
-
-            s += '\n'
+            s += self._report_gradient_statistics() + '\n'
 
             # Print all individuals
-            s += "All Individuals:\n"
-            s += "-" * 50 + "\n"
+            s += "Individuals:\n"
+            s += "-" * 12 + "\n"
             for idx, individual in enumerate(self._population.individuals, 1):
                 pruned = individual.prune()
 
-                # Check if this individual received gradient descent
+                # Check if this individual was optimized via gradient descent
                 grad_data = self._gradient_data.get(individual.ID)
                 if grad_data:
-                    s += f"\nIndividual {idx} (fitness: {grad_data['fitness_before_sgd']:.4f} -> {grad_data['fitness_after_sgd']:.4f}, "
+                    s += f"\nIndividual {idx} (fitness: {grad_data['fitness_before_gd']:.4f} -> {grad_data['fitness_after_gd']:.4f}, "
                     s += f"improvement: {grad_data['fitness_improvement']:.4f}):\n"
                 else:
                     s += f"\nIndividual {idx} (fitness: {individual.fitness:.4f}):\n"
@@ -163,9 +159,9 @@ class Trial_Regression1DGrad(TrialGrad):
             loss_improvements = [data['loss_improvement'] for data in self._gradient_data.values()]
             fitness_improvements = [data['fitness_improvement'] for data in self._gradient_data.values()]
 
-            print("\n" + "=" * 50)
+            print("\n" + "=" * 24)
             print("GRADIENT DESCENT SUMMARY")
-            print("=" * 50)
+            print("=" * 24)
             print(f"Total gradient steps applied:  {len(self._gradient_data)}")
             print(f"Average loss improvement:      {np.mean(loss_improvements):.6f}")
             print(f"Total loss improvement:        {np.sum(loss_improvements):.6f}")
