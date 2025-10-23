@@ -5,10 +5,7 @@ This example demonstrates how to use the Genome.from_dict() class method
 to programmatically create genomes with specific structures.
 """
 
-import sys
-sys.path.append('../..')
-
-from genotype.genome import Genome
+from neat.genotype.genome import Genome
 
 # Example 1: XOR-like network with two hidden nodes
 # Note: InnovationTracker is automatically initialized by from_dict()

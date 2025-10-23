@@ -12,12 +12,10 @@ Classes:
 from pathlib import Path
 import autograd.numpy as np   # type: ignore
 import gymnasium as gym       # type: ignore
-import sys
-sys.path.append(str(Path(__file__).parent.parent))
 
-from run.config import Config
-from phenotype  import Individual
-from run        import Trial
+from neat.run.config import Config
+from neat.phenotype  import Individual
+from neat.run        import Trial
 
 class Trial_Gymnasium(Trial):
     """

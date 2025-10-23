@@ -17,14 +17,12 @@ Classes:
 """
 
 import autograd.numpy as np  # type: ignore
-import sys
 from pathlib import Path
 from typing  import Callable, List, Tuple, Optional
-sys.path.append(str(Path(__file__).parent.parent))
 
-from run.config     import Config
-from run.trial_grad import TrialGrad
-from run            import Experiment
+from neat.run.config     import Config
+from neat.run.trial_grad import TrialGrad
+from neat.run            import Experiment
 
 class Trial_RegressionNDGrad(TrialGrad):
     """

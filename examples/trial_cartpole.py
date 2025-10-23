@@ -55,9 +55,9 @@ Usage:
 import gymnasium as gym    # type: ignore
 from statistics import mean
 
-from run.config import Config
+from neat.run.config import Config
 from examples.trial_gymbase   import Trial_Gymnasium
-from phenotype import Individual
+from neat.phenotype import Individual
 
 class Trial_CartPole(Trial_Gymnasium):
     """
