@@ -313,7 +313,10 @@ class NetworkAutograd(NetworkBase):
             node_id   = self._idx_to_node_id[idx]
             node_gene = self._genome.node_genes[node_id]
 
-            # Convert numpy types to Python native types for cleaner storage
+            # Convert numpy types to Python native float for cleaner storage
+            # biases[idx] and gains[idx] are numpy.float64 (or numpy.float32)
+            # Converting to Python float ensures consistent serialization (e.g., pickle)
+            # and avoids numpy-specific type dependencies in the genome
             node_gene.bias = float(biases[idx])
             node_gene.gain = float(gains[idx])
 
@@ -324,7 +327,7 @@ class NetworkAutograd(NetworkBase):
                 from_idx = self._node_id_to_idx[conn_gene.node_in]
                 to_idx   = self._node_id_to_idx[conn_gene.node_out]
 
-                # Update weight from the weight matrix
+                # Update weight from the weight matrix (convert numpy to Python float)
                 conn_gene.weight = float(weights[from_idx, to_idx])
 
     def __str__(self):
