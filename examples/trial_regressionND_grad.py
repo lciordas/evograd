@@ -196,7 +196,7 @@ class Trial_RegressionNDGrad(TrialGrad):
 
             # Add gradient statistics if enabled
             if self._config.enable_gradient and self._gradient_data:
-                s += self._report_gradient_statistics()
+                s += self._report_GD_statistics()
 
             s += '\n'
             s += "Fittest Individual:\n"

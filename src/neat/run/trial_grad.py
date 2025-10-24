@@ -50,12 +50,6 @@ class TrialGrad(Trial):
 
     Public Methods (inherited from Trial):
         run(): Execute a complete NEAT trial with optional gradient descent
-
-    Internal Attributes:
-        _gradient_data: Dict mapping individual ID to gradient descent statistics
-                       Structure: {individual_id: {'fitness_before_gd', 'fitness_after_gd',
-                                   'fitness_improvement', 'loss_before_gd', 'loss_after_gd',
-                                   'loss_improvement', 'generation'}}
     """
 
     def __init__(self,
@@ -77,6 +71,7 @@ class TrialGrad(Trial):
             raise ValueError("Gradient descent requires network_type='autograd'")
 
         # Track gradient descent data per individual
+        # Gets reset each generatios
         self._gradient_data = {}  # Dict[int, dict] - key: individual.ID
 
     @abstractmethod
@@ -179,7 +174,18 @@ class TrialGrad(Trial):
 
         Uses a two-pass approach:
         1. First pass:  Standard NEAT fitness evaluation for all individuals
-        2. Second pass: Apply gradient descent to selected individuals and re-evaluate
+        2. Second pass: Apply gradient descent to selected individuals to
+                        fine-tune their neural-network and increase fitness
+
+        IMPORTANT: This method modifies individuals that undergo gradient descent:
+        - Always modified: fitness and network parameters (weights, biases, gains)
+        - Lamarckian only: genome is also modified to persist optimized parameters
+
+        The key distinction between modes:
+        - Baldwin effect: Individuals benefit from optimization (better fitness/params)
+                         during selection, but offspring inherit unoptimized genomes
+        - Lamarckian:    Individuals benefit from optimization AND pass optimized
+                         parameters to offspring via modified genomes
 
         Parameters:
             num_jobs: Number of parallel processes for evaluation
@@ -187,127 +193,121 @@ class TrialGrad(Trial):
         # Pass #1: Compute standard NEAT fitness for all individuals
         super()._evaluate_fitness_all(num_jobs)
 
-        # Pass #2: Apply gradient descent to selected individuals
+        # Pass #2: Fine-tune selected individuals via gradient descent
         do_gradient_descent = (self._config.enable_gradient and
                                self._generation_counter % self._config.gradient_frequency == 0)
-        selected_individuals = self._select_individuals_for_gradient() if do_gradient_descent else []
+        selected_individuals = self._select_GD_individuals() if do_gradient_descent else []
         do_gradient_descent  = do_gradient_descent and selected_individuals
 
         if do_gradient_descent:
-            # Clear gradient data from previous generations to avoid stale reporting
-            # Only keep data for individuals being optimized in THIS generation
+
+            # Forget previous generation data
             self._gradient_data = {}
 
             # Store pre-GD fitness for all selected individuals
             fitness_before_gd = {ind.ID: ind.fitness for ind in selected_individuals}
 
+            # -----
+
+            # Run gradient descent optimization. This calculates optimized NN parameters 
+            # (and the corresponding increased fitness) for each individual, and returns 
+            # these results without modifying the individual in any way. 
+            optimization_results = []
             serialize = (num_jobs == 1)
             if serialize:
                 for individual in selected_individuals:
-
-                    # Apply gradient descent to one individual
-                    result = self._apply_gradient_descent(individual)
-                    # Unpack result (genome_data is 4th element if present)
-                    loss_final = result[0]
-                    loss_improvement = result[1]
-                    fitness_improvement = result[2]
-                    # genome_data = result[3] if len(result) > 3 else None  # Not needed in serial mode
-
-                    fitness_final      = self._loss_to_fitness(loss_final)
-                    individual.fitness = fitness_final
-
-                    # Store gradient data for this individual
-                    self._gradient_data[individual.ID] = {
-                        'fitness_before_gd'  : fitness_before_gd[individual.ID],
-                        'fitness_after_gd'   : fitness_final,
-                        'fitness_improvement': fitness_improvement,
-                        'loss_before_gd'     : loss_final + loss_improvement,
-                        'loss_after_gd'      : loss_final,
-                        'loss_improvement'   : loss_improvement,
-                        'generation'         : self._generation_counter
-                    }
+                    opt_results = self._GD_optimize(individual)
+                    optimization_results.append(opt_results)
             else:
+                optimization_results = \
+                    Parallel(num_jobs)(delayed(self._GD_optimize)(i) for i in selected_individuals)
 
-                # Apply gradient descent to all individuals in parallel
-                results = \
-                    Parallel(num_jobs)(delayed(self._apply_gradient_descent)(i) for i in selected_individuals)
+            # -----
 
-                for individual, result in zip(selected_individuals, results):
-                    # Unpack result
-                    loss_final = result[0]
-                    loss_improvement = result[1]
-                    fitness_improvement = result[2]
-                    genome_data = result[3] if len(result) > 3 else None
+            # Update individuals:
+            # 1. Fitness is replaced by gd-optimized fitness, which is used to select members for reproduction.
+            # 2. Network parameters are replaced with optimized values (to match the optimized fitness).
+            # 3. If Lamarckian evolution, then optimized network parameters are also saved to genome (to be inherited),
+            #    otherwise (Baldwin effect) optimized parameters stay in network but NOT in genome (not inherited).
+            for individual, opt_results in zip(selected_individuals, optimization_results):
 
-                    fitness_final      = self._loss_to_fitness(loss_final)
-                    individual.fitness = fitness_final
+                # Update individual fitness with optimized value
+                individual.fitness = opt_results['final_fitness']
 
-                    # Apply genome updates if Lamarckian evolution (genome_data is not None)
-                    if genome_data is not None:
-                        # Update node parameters in main process genome
-                        for node_id, (bias, gain) in genome_data['node_params'].items():
-                            individual.genome.node_genes[node_id].bias = bias
-                            individual.genome.node_genes[node_id].gain = gain
+                # Update network parameters with optimized values.
+                # Evaluating fitness using the updated network
+                # generates the optimized fitness (consistency).
+                network = individual._network
+                network.set_parameters(
+                    opt_results['optimized_weights'],
+                    opt_results['optimized_biases'],
+                    opt_results['optimized_gains'],
+                    enforce_bounds=True
+                )
 
-                        # Update connection parameters in main process genome
-                        for innovation_num, weight in genome_data['conn_params'].items():
-                            individual.genome.conn_genes[innovation_num].weight = weight
-
-                        # CRITICAL FIX: Sync network parameters with updated genome
-                        # In parallel mode, the network's internal arrays are still holding old parameters
-                        # We need to reload them from the now-updated genome
-                        individual._network.load_parameters_from_genome(enforce_bounds=True)
-                    else:
-                        # Baldwin effect: Also need to sync network with genome
-                        # In parallel mode, gradient descent happened in worker process
-                        # The main process network may have stale parameters
-                        individual._network.load_parameters_from_genome(enforce_bounds=True)
-
-                    # Store gradient data for this individual
-                    self._gradient_data[individual.ID] = {
-                        'fitness_before_gd'  : fitness_before_gd[individual.ID],
-                        'fitness_after_gd'   : fitness_final,
-                        'fitness_improvement': fitness_improvement,
-                        'loss_before_gd'     : loss_final + loss_improvement,
-                        'loss_after_gd'      : loss_final,
-                        'loss_improvement'   : loss_improvement,
-                        'generation'         : self._generation_counter
-                    }
+                # For Lamarckian evolution: save the optimized parameters to genome for inheritance
+                if self._config.lamarckian_evolution:
+                    network.save_parameters_to_genome(enforce_bounds=True)
 
             # Update species fitness after gradient improvements
             self._population._species_manager.update_fitness()
 
-    def _apply_gradient_descent(self, individual: "Individual") -> tuple[float, float, float]:
+            # -----
+
+            # Store gradient optimization results for reporting / analytics purposes
+            for individual, opt_results in zip(selected_individuals, optimization_results):
+
+                self._gradient_data[individual.ID] = {
+                    'fitness_before_gd'  : fitness_before_gd[individual.ID],
+                    'fitness_after_gd'   : opt_results['final_fitness'],
+                    'fitness_improvement': opt_results['fitness_improvement'],
+                    'loss_before_gd'     : opt_results['initial_loss'],
+                    'loss_after_gd'      : opt_results['final_loss'],
+                    'loss_improvement'   : opt_results['loss_improvement'],
+                    'generation'         : self._generation_counter
+                }
+
+    def _GD_optimize(self, individual: "Individual") -> dict:
         """
         Apply gradient descent to optimize an individual's network parameters.
 
+        This is a pure function that computes optimized parameters without 
+        modifying the individual, its network, or genome in any way.
+
         Parameters:
-            individual: The individual to optimize
+            individual: The individual to optimize via gradient descent
 
         Returns:
-            tuple: (final_loss, loss_improvement, fitness_improvement)
-                - final_loss: Loss after gradient descent
-                - loss_improvement: initial_loss - final_loss
-                - fitness_improvement: final_fitness - initial_fitness
+            dict: Optimization results containing:
+                - 'initial_loss':        loss before gradient descent
+                - 'final_loss':          loss after gradient descent
+                - 'loss_improvement':    initial_loss - final_loss
+                - 'initial_fitness':     fitness before gradient descent
+                - 'final_fitness':       fitness after gradient descent
+                - 'fitness_improvement': final_fitness - initial_fitness
+                - 'optimized_weights':   optimized weight matrix
+                - 'optimized_biases':    optimized bias vector
+                - 'optimized_gains':     optimized gain vector
         """
-        # Get network reference
-        network = individual._network
-
         # Get training data
         inputs, targets = self._get_training_data()
 
         # Get current network parameters
+        network = individual._network
         weights, biases, gains = network.get_parameters()
 
-        # Flatten parameters for Adam optimizer
+        # Flatten parameters for Adam optimizer.
+        # Note: 'flat_params' contains copies of 'weights', 'biases' and 'gains',
+        #        since 'flatten()' and 'concatenate()' create new arrays.
         flat_params = np.concatenate([weights.flatten(), biases.flatten(), gains.flatten()])
         shapes      = (weights.shape, biases.shape, gains.shape)
         w_size      = np.prod(shapes[0])
         b_size      = np.prod(shapes[1])
 
-        # Loss function parameterized by flattened parameters
+        # Define loss function that takes in flattened parameters (that's needed by of Adam)
         # Note: iter parameter is required by adam optimizer but unused here
         def objective(flat_params, _iter=None):
+
             # Unflatten parameters
             w = flat_params[:w_size].reshape(shapes[0])
             b = flat_params[w_size:w_size + b_size].reshape(shapes[1])
@@ -318,7 +318,7 @@ class TrialGrad(Trial):
             return self._loss_function(outputs, targets)
 
         # Track initial loss and fitness
-        initial_loss = objective(flat_params)
+        initial_loss    = objective(flat_params)
         initial_fitness = self._loss_to_fitness(initial_loss)
 
         # Create gradient function and apply Adam optimizer
@@ -327,54 +327,26 @@ class TrialGrad(Trial):
                                 num_iters=self._config.gradient_steps,
                                 step_size=self._config.learning_rate)
 
-        # Unflatten optimized parameters
-        weights = optimized_params[:w_size].reshape(shapes[0])
-        biases  = optimized_params[w_size:w_size + b_size].reshape(shapes[1])
-        gains   = optimized_params[w_size + b_size:].reshape(shapes[2])
-
-        # Update network with optimized parameters
-        network.set_parameters(weights, biases, gains, enforce_bounds=True)
-
-        # Calculate final loss and fitness (using optimized parameters)
-        final_loss = objective(optimized_params)
-        final_fitness = self._loss_to_fitness(final_loss)
-
-        # Calculate improvements
-        loss_improvement = initial_loss - final_loss
+        # Calculate final loss and fitness
+        final_loss          = objective(optimized_params)
+        loss_improvement    = initial_loss - final_loss
+        final_fitness       = self._loss_to_fitness(final_loss)
         fitness_improvement = final_fitness - initial_fitness
 
-        # Handle parameter inheritance based on evolution mode
-        if self._config.lamarckian_evolution:
-            # Lamarckian: Save optimized parameters to genome for inheritance
-            network.save_parameters_to_genome(enforce_bounds=True)
+        # Return results
+        return {
+            'initial_loss':        initial_loss,
+            'final_loss':          final_loss,
+            'loss_improvement':    loss_improvement,
+            'initial_fitness':     initial_fitness,
+            'final_fitness':       final_fitness,
+            'fitness_improvement': fitness_improvement,
+            'optimized_weights':   optimized_params[:w_size].reshape(shapes[0]),
+            'optimized_biases':    optimized_params[w_size:w_size + b_size].reshape(shapes[1]),
+            'optimized_gains':     optimized_params[w_size + b_size:].reshape(shapes[2])
+        }
 
-            # Extract genome parameters to return to main process (for parallel execution)
-            # This is necessary because in parallel mode, workers operate on copies
-            # and these updates need to be transferred back to the main process
-            genome_data = {
-                'node_params': {},  # node_id -> (bias, gain)
-                'conn_params': {}   # innovation_num -> weight
-            }
-
-            # Extract node parameters
-            for node_id, node_gene in individual.genome.node_genes.items():
-                genome_data['node_params'][node_id] = (node_gene.bias, node_gene.gain)
-
-            # Extract connection parameters
-            for innovation_num, conn_gene in individual.genome.conn_genes.items():
-                if conn_gene.enabled:
-                    genome_data['conn_params'][innovation_num] = conn_gene.weight
-
-            return final_loss, loss_improvement, fitness_improvement, genome_data
-        else:
-            # Baldwin effect: Restore network to genome parameters
-            # (fitness improvement used for selection, but learned parameters not inherited)
-            network.load_parameters_from_genome(enforce_bounds=True)
-
-            # For Baldwin effect, no genome updates needed
-            return final_loss, loss_improvement, fitness_improvement, None
-
-    def _select_individuals_for_gradient(self) -> list["Individual"]:
+    def _select_GD_individuals(self) -> list["Individual"]:
         """
         Select which individuals should receive gradient descent training.
 
@@ -402,12 +374,12 @@ class TrialGrad(Trial):
         else:
             raise ValueError(f"Unknown gradient_selection: {self._config.gradient_selection}")
 
-    def _report_gradient_statistics(self):
+    def _report_GD_statistics(self):
         """
         Report statistics about gradient descent performance.
 
-        This method can be called from _generation_report() to
-        display gradient training statistics.
+        This method can be called from '_generation_report()' 
+        to display gradient training statistics.
         """
         if self._gradient_data:
             fitness_improvements = [data['fitness_improvement'] for data in self._gradient_data.values()]
@@ -415,73 +387,3 @@ class TrialGrad(Trial):
             s = f"Avg fitness improvement due to gradient descent: {avg_fitness_improvement:.6f}\n"
             return s
         return ""
-
-    def run(self, num_jobs: int = 1):
-        """
-        Run the trial with gradient descent support.
-
-        Extends the base Trial.run() to add final champion optimization
-        when using Baldwin effect. After evolution completes, if Baldwin
-        effect was used, the champion gets one final gradient descent
-        optimization and the parameters are saved.
-
-        Parameters:
-            num_jobs: Number of parallel processes for fitness evaluation
-                      1 = serial (no parallelization)
-                     -1 = use all available CPU cores
-                      n = use n processes
-        """
-        # Run the standard NEAT evolution
-        super().run(num_jobs)
-
-        # After evolution completes, optimize the final champion if using Baldwin effect
-        self._optimize_final_champion()
-
-    def _optimize_final_champion(self):
-        """
-        Apply gradient descent to the final champion and save optimized parameters.
-
-        This is called after evolution completes. When using Baldwin effect during
-        evolution, the champion's fitness represents its learning potential but the
-        network has unoptimized parameters. This method applies gradient descent
-        one final time and saves the optimized parameters to both the network and
-        genome, ensuring the champion performs as well as its fitness suggests.
-
-        This gives us the best of both worlds:
-        - Baldwin effect during evolution (no Lamarckian inheritance)
-        - Optimized champion after evolution completes
-        """
-        if not self._config.enable_gradient:
-            return  # No gradient descent enabled, nothing to do
-
-        if self._config.lamarckian_evolution:
-            return  # Lamarckian already optimized, nothing more to do
-
-        champion = self._population.get_fittest_individual()
-        if champion is None or champion.fitness is None:
-            return  # No valid champion
-
-        # Temporarily enable Lamarckian mode for the final optimization
-        # This ensures the optimized parameters are kept
-        original_lamarckian = self._config.lamarckian_evolution
-        self._config.lamarckian_evolution = True
-
-        # Apply gradient descent to optimize the champion
-        result = self._apply_gradient_descent(champion)
-        loss_final = result[0]
-        loss_improvement = result[1]
-        fitness_improvement = result[2]
-
-        # Restore original Lamarckian setting
-        self._config.lamarckian_evolution = original_lamarckian
-
-        # Update champion's fitness with the optimized value
-        fitness_final = self._loss_to_fitness(loss_final)
-        champion.fitness = fitness_final
-
-        if not self._suppress_output:
-            print(f"\nFinal champion optimization (Baldwin → Optimized):")
-            print(f"  Champion ID: {champion.ID}")
-            print(f"  Fitness improvement: {fitness_improvement:.6f}")
-            print(f"  Final fitness: {fitness_final:.4f}")
-            print(f"  Note: Optimized parameters saved to champion's genome")

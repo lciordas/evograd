@@ -124,7 +124,7 @@ class Trial_Regression1DGrad(TrialGrad):
             s += f"number species  = {len(self._population._species_manager.species)}\n"
             s += f"maximum fitness = {fittest.fitness:.4f}\n"
 
-            s += self._report_gradient_statistics() + '\n'
+            s += self._report_GD_statistics() + '\n'
 
             # Print all individuals
             s += "Individuals:\n"
@@ -150,22 +150,6 @@ class Trial_Regression1DGrad(TrialGrad):
         Display final results including gradient training summary.
         """
         individual_fittest = self._population.get_fittest_individual().prune()
-
-        # Report gradient training summary
-        if self._config.enable_gradient and self._gradient_data:
-            # Extract loss and fitness improvements from gradient data dict
-            loss_improvements = [data['loss_improvement'] for data in self._gradient_data.values()]
-            fitness_improvements = [data['fitness_improvement'] for data in self._gradient_data.values()]
-
-            print("\n" + "=" * 24)
-            print("GRADIENT DESCENT SUMMARY")
-            print("=" * 24)
-            print(f"Total gradient steps applied:  {len(self._gradient_data)}")
-            print(f"Average loss improvement:      {np.mean(loss_improvements):.6f}")
-            print(f"Total loss improvement:        {np.sum(loss_improvements):.6f}")
-            print(f"Average fitness improvement:   {np.mean(fitness_improvements):.6f}")
-            print(f"Total fitness improvement:     {np.sum(fitness_improvements):.6f}")
-            print()
 
         # Visualize the network
         try:
@@ -247,15 +231,3 @@ class Experiment_Regression1DGrad(Experiment):
         """
         # Call base class report
         super()._final_report()
-
-        # Add gradient-specific statistics if enabled
-        if self._config.enable_gradient:
-            print("\nGRADIENT DESCENT IMPACT:")
-            print(f"  Gradient descent was {'ENABLED' if self._config.enable_gradient else 'DISABLED'}")
-            print(f"  Learning rate:      {self._config.learning_rate}")
-            print(f"  Steps per update:   {self._config.gradient_steps}")
-            print(f"  Update frequency:   Every {self._config.gradient_frequency} generations")
-            print(f"  Selection strategy: {self._config.gradient_selection}")
-            if self._config.gradient_selection == 'top_k':
-                print(f"  Top K individuals:  {self._config.gradient_top_k}")
-            print(f"  Lamarckian evolution: {'ENABLED' if self._config.lamarckian_evolution else 'DISABLED'}")

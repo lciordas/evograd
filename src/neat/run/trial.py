@@ -181,8 +181,8 @@ class Trial(ABC):
         Print a report describing the current generation.
 
         This method is called after evaluating each generation and can be used to
-        log statistics, visualize results, save checkpoints, or display information
-        about the current generation (e.g., generation number, best fitness, species count).
+        log statistics, visualize results, save checkpoints, or display progress
+        information (e.g., generation number, best fitness, species count).
 
         This method is suppressed by setting 'self._suppress_output' to 'True',
         which we might do when running many trials, as part of an experiment.
