@@ -278,6 +278,54 @@ class NetworkAutograd(NetworkBase):
 
         return outputs
 
+    def load_parameters_from_genome(self, enforce_bounds=True):
+        """
+        Load network parameters from the genome (reverse of save_parameters_to_genome).
+
+        This method restores the network's parameters to match the genome's current state.
+        Useful when gradient descent has modified network parameters temporarily for
+        fitness evaluation (Baldwin effect), and you want to revert to the genome's
+        parameters before reproduction/cloning.
+
+        Parameters:
+            enforce_bounds: If True, clip parameters to config bounds after loading (default: True)
+
+        Note:
+            Only updates parameter values (weights, biases, gains). Network topology
+            (connections, nodes) remains unchanged.
+        """
+        # Build weight matrix from genome
+        weights = np.zeros((self._num_nodes, self._num_nodes))
+        for conn_gene in self._genome.conn_genes.values():
+            if conn_gene.enabled:
+                from_idx = self._node_id_to_idx[conn_gene.node_in]
+                to_idx   = self._node_id_to_idx[conn_gene.node_out]
+                weights[from_idx, to_idx] = conn_gene.weight
+
+        # Build bias and gain arrays from genome
+        bias_list = []
+        gain_list = []
+        for idx in range(self._num_nodes):
+            node_id   = self._idx_to_node_id[idx]
+            node_gene = self._genome.node_genes[node_id]
+            bias_list.append(node_gene.bias)
+            gain_list.append(node_gene.gain)
+
+        biases = np.array(bias_list)
+        gains  = np.array(gain_list)
+
+        # Optionally enforce parameter bounds
+        if enforce_bounds:
+            config  = self._genome._config
+            weights = np.clip(weights, config.min_weight, config.max_weight)
+            biases  = np.clip(biases , config.min_bias  , config.max_bias)
+            gains   = np.clip(gains  , config.min_gain  , config.max_gain)
+
+        # Update network parameters
+        self.weights = weights
+        self.biases  = biases
+        self.gains   = gains
+
     def save_parameters_to_genome(self, enforce_bounds=True):
         """
         Save current network parameters back into the genome (Lamarckian evolution).

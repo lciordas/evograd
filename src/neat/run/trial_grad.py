@@ -302,17 +302,22 @@ class TrialGrad(Trial):
         # Update network with optimized parameters
         network.set_parameters(weights, biases, gains, enforce_bounds=True)
 
-        # Save optimized parameters back to genome if Lamarckian evolution is enabled
-        if self._config.lamarckian_evolution:
-            network.save_parameters_to_genome(enforce_bounds=True)
-
-        # Calculate final loss and fitness
+        # Calculate final loss and fitness (using optimized parameters)
         final_loss = objective(optimized_params)
         final_fitness = self._loss_to_fitness(final_loss)
 
         # Calculate improvements
         loss_improvement = initial_loss - final_loss
         fitness_improvement = final_fitness - initial_fitness
+
+        # Handle parameter inheritance based on evolution mode
+        if self._config.lamarckian_evolution:
+            # Lamarckian: Save optimized parameters to genome for inheritance
+            network.save_parameters_to_genome(enforce_bounds=True)
+        else:
+            # Baldwin effect: Restore network to genome parameters
+            # (fitness improvement used for selection, but learned parameters not inherited)
+            network.load_parameters_from_genome(enforce_bounds=True)
 
         return final_loss, loss_improvement, fitness_improvement
 
