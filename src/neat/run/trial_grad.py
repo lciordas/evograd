@@ -206,7 +206,13 @@ class TrialGrad(Trial):
                 for individual in selected_individuals:
 
                     # Apply gradient descent to one individual
-                    loss_final, loss_improvement, fitness_improvement = self._apply_gradient_descent(individual)
+                    result = self._apply_gradient_descent(individual)
+                    # Unpack result (genome_data is 4th element if present)
+                    loss_final = result[0]
+                    loss_improvement = result[1]
+                    fitness_improvement = result[2]
+                    # genome_data = result[3] if len(result) > 3 else None  # Not needed in serial mode
+
                     fitness_final      = self._loss_to_fitness(loss_final)
                     individual.fitness = fitness_final
 
@@ -215,7 +221,7 @@ class TrialGrad(Trial):
                         'fitness_before_gd'  : fitness_before_gd[individual.ID],
                         'fitness_after_gd'   : fitness_final,
                         'fitness_improvement': fitness_improvement,
-                        'loss_before_gd'     : loss_final + loss_improvement,  
+                        'loss_before_gd'     : loss_final + loss_improvement,
                         'loss_after_gd'      : loss_final,
                         'loss_improvement'   : loss_improvement,
                         'generation'         : self._generation_counter
@@ -226,9 +232,26 @@ class TrialGrad(Trial):
                 results = \
                     Parallel(num_jobs)(delayed(self._apply_gradient_descent)(i) for i in selected_individuals)
 
-                for individual, (loss_final, loss_improvement, fitness_improvement) in zip(selected_individuals, results):
+                for individual, result in zip(selected_individuals, results):
+                    # Unpack result
+                    loss_final = result[0]
+                    loss_improvement = result[1]
+                    fitness_improvement = result[2]
+                    genome_data = result[3] if len(result) > 3 else None
+
                     fitness_final      = self._loss_to_fitness(loss_final)
                     individual.fitness = fitness_final
+
+                    # Apply genome updates if Lamarckian evolution (genome_data is not None)
+                    if genome_data is not None:
+                        # Update node parameters in main process genome
+                        for node_id, (bias, gain) in genome_data['node_params'].items():
+                            individual.genome.node_genes[node_id].bias = bias
+                            individual.genome.node_genes[node_id].gain = gain
+
+                        # Update connection parameters in main process genome
+                        for innovation_num, weight in genome_data['conn_params'].items():
+                            individual.genome.conn_genes[innovation_num].weight = weight
 
                     # Store gradient data for this individual
                     self._gradient_data[individual.ID] = {
@@ -314,12 +337,32 @@ class TrialGrad(Trial):
         if self._config.lamarckian_evolution:
             # Lamarckian: Save optimized parameters to genome for inheritance
             network.save_parameters_to_genome(enforce_bounds=True)
+
+            # Extract genome parameters to return to main process (for parallel execution)
+            # This is necessary because in parallel mode, workers operate on copies
+            # and these updates need to be transferred back to the main process
+            genome_data = {
+                'node_params': {},  # node_id -> (bias, gain)
+                'conn_params': {}   # innovation_num -> weight
+            }
+
+            # Extract node parameters
+            for node_id, node_gene in individual.genome.node_genes.items():
+                genome_data['node_params'][node_id] = (node_gene.bias, node_gene.gain)
+
+            # Extract connection parameters
+            for innovation_num, conn_gene in individual.genome.conn_genes.items():
+                if conn_gene.enabled:
+                    genome_data['conn_params'][innovation_num] = conn_gene.weight
+
+            return final_loss, loss_improvement, fitness_improvement, genome_data
         else:
             # Baldwin effect: Restore network to genome parameters
             # (fitness improvement used for selection, but learned parameters not inherited)
             network.load_parameters_from_genome(enforce_bounds=True)
 
-        return final_loss, loss_improvement, fitness_improvement
+            # For Baldwin effect, no genome updates needed
+            return final_loss, loss_improvement, fitness_improvement, None
 
     def _select_individuals_for_gradient(self) -> list["Individual"]:
         """
