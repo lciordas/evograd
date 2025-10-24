@@ -330,13 +330,13 @@ class TrialGrad(Trial):
 
         elif self._config.gradient_selection == 'top_k':
             sorted_individuals = sorted(individuals,
-                                       key=lambda x: x.fitness,
+                                       key=lambda x: (x.fitness, -x.ID),
                                        reverse=True)
             return sorted_individuals[:self._config.gradient_top_k]
 
         elif self._config.gradient_selection == 'top_percent':
             sorted_individuals = sorted(individuals,
-                                       key=lambda x: x.fitness,
+                                       key=lambda x: (x.fitness, -x.ID),
                                        reverse=True)
             num_to_select = max(1, int(len(individuals) * self._config.gradient_top_percent))
             return sorted_individuals[:num_to_select]

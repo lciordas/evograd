@@ -170,7 +170,8 @@ class Species:
 
         # Sort all member by fitness.
         # It is assumed that individual fitness has already been calculated
-        sorted_members = sorted(self.members.values(), key=lambda ind: ind.fitness,reverse=True)
+        # Use ID as tie-breaker to ensure deterministic ordering when fitnesses are equal
+        sorted_members = sorted(self.members.values(), key=lambda ind: (ind.fitness, -ind.ID), reverse=True)
 
         # Apply elitism: the top individuals from the species
         # are transferred to the next generation unchanged.
