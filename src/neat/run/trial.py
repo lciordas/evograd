@@ -31,7 +31,7 @@ class Trial(ABC):
     Subclasses must implement:
     - _reset(): Reset trial-specific state and call super()._reset()
     - _evaluate_fitness(individual): Evaluate fitness for a single individual
-    - _report_progress(): Display progress after each generation
+    - _generation_report(): Print a report describing the current generation
     - _final_report(): Display final results
 
     Subclasses can override:
@@ -93,9 +93,9 @@ class Trial(ABC):
         # Evaluate the fitness of the initial population
         self._evaluate_fitness_all(num_jobs)
 
-        # Display progress for the initial population
+        # Display statistics for the initial population
         if not self._suppress_output:
-            self._report_progress()
+            self._generation_report()
 
         # Evolution loop
         while not self._terminate():
@@ -107,9 +107,9 @@ class Trial(ABC):
             # Evaluate the fitness of each individual in the new generation
             self._evaluate_fitness_all(num_jobs)
 
-            # Display progress after each generation
+            # Display report for the current generation
             if not self._suppress_output:
-                self._report_progress()
+                self._generation_report()
 
         # Produce final report
         if not self._suppress_output:
@@ -176,13 +176,13 @@ class Trial(ABC):
         self._population._species_manager.update_fitness()
 
     @abstractmethod
-    def _report_progress(self):
+    def _generation_report(self):
         """
-        Report trial progress after each generation.
+        Print a report describing the current generation.
 
         This method is called after evaluating each generation and can be used to
-        log statistics, visualize results, save checkpoints, or display progress
-        information (e.g., generation number, best fitness, species count).
+        log statistics, visualize results, save checkpoints, or display information
+        about the current generation (e.g., generation number, best fitness, species count).
 
         This method is suppressed by setting 'self._suppress_output' to 'True',
         which we might do when running many trials, as part of an experiment.

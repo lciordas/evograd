@@ -108,13 +108,13 @@ class Trial_Regression1DGrad(TrialGrad):
         """
         return self._Xs, self._Ys
 
-    def _report_progress(self):
+    def _generation_report(self):
         """
-        Display progress including gradient descent statistics.
+        Print a report describing the current generation.
         """
-        display_progress = (self._generation_counter % 1 == 0) or self._terminate()
+        display_report = (self._generation_counter % 1 == 0) or self._terminate()
 
-        if display_progress:
+        if display_report:
             fittest = self._population.get_fittest_individual()
             fittest = fittest.prune()
 
@@ -128,7 +128,7 @@ class Trial_Regression1DGrad(TrialGrad):
 
             # Print all individuals
             s += "Individuals:\n"
-            s += "-" * 12 + "\n"
+            s += "-" * 12
             for idx, individual in enumerate(self._population.individuals, 1):
                 pruned = individual.prune()
 

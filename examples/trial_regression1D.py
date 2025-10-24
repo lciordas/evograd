@@ -110,13 +110,13 @@ class Trial_Regression1D(Trial):
 
         return fitness
 
-    def _report_progress(self):
+    def _generation_report(self):
         """
-        Display relevant information after each generation.
+        Print a report describing the current generation.
         """
-        display_progress = (self._generation_counter % 20 == 1) or self._terminate()
+        display_report = (self._generation_counter % 20 == 1) or self._terminate()
 
-        if display_progress:
+        if display_report:
             fittest = self._population.get_fittest_individual()
             fittest = fittest.prune()
 

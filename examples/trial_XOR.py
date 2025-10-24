@@ -201,9 +201,9 @@ class Trial_XOR(Trial):
 
         return results
 
-    def _report_progress(self):
+    def _generation_report(self):
         """
-        Display relevant information after each generation.
+        Print a report describing the current generation.
 
         This method is suppressed by setting 'self._suppress_output' to 'True',
         which we might do when running many trials, as part of an experiment.

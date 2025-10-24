@@ -406,7 +406,7 @@ class TrialGrad(Trial):
         """
         Report statistics about gradient descent performance.
 
-        This method can be called from _report_progress() to
+        This method can be called from _generation_report() to
         display gradient training statistics.
         """
         if self._gradient_data:

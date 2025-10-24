@@ -176,13 +176,13 @@ class Trial_RegressionNDGrad(TrialGrad):
         """
         return self._Xs, self._Ys
 
-    def _report_progress(self):
+    def _generation_report(self):
         """
-        Display progress including gradient descent statistics.
+        Print a report describing the current generation.
         """
-        display_progress = (self._generation_counter % 1 == 0) or self._terminate()
+        display_report = (self._generation_counter % 1 == 0) or self._terminate()
 
-        if display_progress:
+        if display_report:
             fittest = self._population.get_fittest_individual()
             fittest = fittest.prune()
 

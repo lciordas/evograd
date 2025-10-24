@@ -102,9 +102,9 @@ class Trial_Gymnasium(Trial):
 
         return observations, rewards
 
-    def _report_progress(self):
+    def _generation_report(self):
         """
-        Display relevant information after each generation.
+        Print a report describing the current generation.
         """
         fittest = self._population.get_fittest_individual()
         fittest_pruned = fittest.prune()
