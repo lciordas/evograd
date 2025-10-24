@@ -253,6 +253,11 @@ class TrialGrad(Trial):
                         for innovation_num, weight in genome_data['conn_params'].items():
                             individual.genome.conn_genes[innovation_num].weight = weight
 
+                        # CRITICAL FIX: Sync network parameters with updated genome
+                        # In parallel mode, the network's internal arrays are still holding old parameters
+                        # We need to reload them from the now-updated genome
+                        individual._network.load_parameters_from_genome(enforce_bounds=True)
+
                     # Store gradient data for this individual
                     self._gradient_data[individual.ID] = {
                         'fitness_before_gd'  : fitness_before_gd[individual.ID],
