@@ -257,6 +257,11 @@ class TrialGrad(Trial):
                         # In parallel mode, the network's internal arrays are still holding old parameters
                         # We need to reload them from the now-updated genome
                         individual._network.load_parameters_from_genome(enforce_bounds=True)
+                    else:
+                        # Baldwin effect: Also need to sync network with genome
+                        # In parallel mode, gradient descent happened in worker process
+                        # The main process network may have stale parameters
+                        individual._network.load_parameters_from_genome(enforce_bounds=True)
 
                     # Store gradient data for this individual
                     self._gradient_data[individual.ID] = {
@@ -401,7 +406,7 @@ class TrialGrad(Trial):
         """
         Report statistics about gradient descent performance.
 
-        This method can be called from _report_progress() to 
+        This method can be called from _report_progress() to
         display gradient training statistics.
         """
         if self._gradient_data:
@@ -410,3 +415,73 @@ class TrialGrad(Trial):
             s = f"Avg fitness improvement due to gradient descent: {avg_fitness_improvement:.6f}\n"
             return s
         return ""
+
+    def run(self, num_jobs: int = 1):
+        """
+        Run the trial with gradient descent support.
+
+        Extends the base Trial.run() to add final champion optimization
+        when using Baldwin effect. After evolution completes, if Baldwin
+        effect was used, the champion gets one final gradient descent
+        optimization and the parameters are saved.
+
+        Parameters:
+            num_jobs: Number of parallel processes for fitness evaluation
+                      1 = serial (no parallelization)
+                     -1 = use all available CPU cores
+                      n = use n processes
+        """
+        # Run the standard NEAT evolution
+        super().run(num_jobs)
+
+        # After evolution completes, optimize the final champion if using Baldwin effect
+        self._optimize_final_champion()
+
+    def _optimize_final_champion(self):
+        """
+        Apply gradient descent to the final champion and save optimized parameters.
+
+        This is called after evolution completes. When using Baldwin effect during
+        evolution, the champion's fitness represents its learning potential but the
+        network has unoptimized parameters. This method applies gradient descent
+        one final time and saves the optimized parameters to both the network and
+        genome, ensuring the champion performs as well as its fitness suggests.
+
+        This gives us the best of both worlds:
+        - Baldwin effect during evolution (no Lamarckian inheritance)
+        - Optimized champion after evolution completes
+        """
+        if not self._config.enable_gradient:
+            return  # No gradient descent enabled, nothing to do
+
+        if self._config.lamarckian_evolution:
+            return  # Lamarckian already optimized, nothing more to do
+
+        champion = self._population.get_fittest_individual()
+        if champion is None or champion.fitness is None:
+            return  # No valid champion
+
+        # Temporarily enable Lamarckian mode for the final optimization
+        # This ensures the optimized parameters are kept
+        original_lamarckian = self._config.lamarckian_evolution
+        self._config.lamarckian_evolution = True
+
+        # Apply gradient descent to optimize the champion
+        result = self._apply_gradient_descent(champion)
+        loss_final = result[0]
+        loss_improvement = result[1]
+        fitness_improvement = result[2]
+
+        # Restore original Lamarckian setting
+        self._config.lamarckian_evolution = original_lamarckian
+
+        # Update champion's fitness with the optimized value
+        fitness_final = self._loss_to_fitness(loss_final)
+        champion.fitness = fitness_final
+
+        if not self._suppress_output:
+            print(f"\nFinal champion optimization (Baldwin → Optimized):")
+            print(f"  Champion ID: {champion.ID}")
+            print(f"  Fitness improvement: {fitness_improvement:.6f}")
+            print(f"  Final fitness: {fitness_final:.4f}")
+            print(f"  Note: Optimized parameters saved to champion's genome")
