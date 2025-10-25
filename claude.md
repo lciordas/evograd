@@ -73,6 +73,7 @@ This codebase provides a comprehensive NEAT implementation with several enhancem
 * NEVER mention Claude, Anthropic, or AI assistance in commit messages
 * NEVER include AI-generated footers or co-authorship attributions
 * Write commits as technical changes only - no AI attributions
+* NEVER commit without being explicitly instructed to
 * Format: `<type>: <description>` (e.g., `feat: add mutation operator`)
 * Focus on what changed and why, not how it was created
 
