@@ -80,7 +80,7 @@ class NetworkFast(NetworkBase):
             node_gene   = genome.node_genes[node_id]
             biases[idx] = node_gene.bias
             gains[idx]  = node_gene.gain
-            activation_names.append(node_gene._activation_name)
+            activation_names.append(node_gene.activation_name)
 
         self.biases = biases
         self.gains  = gains

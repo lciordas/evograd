@@ -145,7 +145,7 @@ class Neuron:
     @property
     def activation(self) -> Callable[[float], float]:
         """The Neuron activation function, used to calculate: output = activation(gain * weighted_input + bias)"""
-        return self._gene._activation
+        return self._gene.activation
 
     def calculate_output(self, input_data: float) -> None:
         """

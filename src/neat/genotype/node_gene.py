@@ -15,7 +15,7 @@ from enum   import Enum
 from typing import Callable
 
 from neat.activations import activations
-from neat.run.config import Config
+from neat.run.config  import Config
 
 class NodeType(Enum):
     """
@@ -37,10 +37,12 @@ class NodeGene:
     The node computes its output as: activation(gain * weighted_input + bias)
 
     Public Attributes:
-        id:   Unique identifier for this node
-        type: Type of node (INPUT, HIDDEN, or OUTPUT)
-        bias: Bias value added to the node's weighted input
-        gain: Multiplier applied to the node's weighted input
+        id:              Unique identifier for this node
+        type:            Type of node (INPUT, HIDDEN, or OUTPUT)
+        bias:            Bias value added to the node's weighted input
+        gain:            Multiplier applied to the node's weighted input
+        activation_name: Name of the activation function (e.g., 'tanh', 'relu')
+        activation:      The activation function itself (callable)
 
     Public Methods:
         mutate(): Stochastically mutate the bias and gain parameters
@@ -57,7 +59,8 @@ class NodeGene:
         Initialize a node gene.
         If the 'bias' and 'gain' parameters are not specified, they will be
         initialized with random values, according to the configuration file.
-        If 'activation_name' is not specified, it will use the default from config.
+        If 'activation_name' is not specified, it will use the default from 
+        the configuration file.
 
         Parameters:
             node_id:         Unique identifier for this node
@@ -66,7 +69,7 @@ class NodeGene:
             bias:            Bias value added to the node's weighted input
             gain:            Multiplier applied to the node's weighted input
             activation_name: Name of activation function (e.g., 'tanh', 'relu')
-                           If None, uses config.activation
+                             If None, uses config.activation
         """
         if bias is None:
             bias = np.random.normal(config.bias_init_mean, config.bias_init_stdev)
@@ -76,17 +79,16 @@ class NodeGene:
             gain = np.random.normal(config.gain_init_mean, config.gain_init_stdev)
             gain = np.minimum(np.maximum(gain, config.min_gain), config.max_gain)
 
-        # Use provided activation name, or default from config
         if activation_name is None:
             activation_name = config.activation
 
-        self.id              : int                      = node_id
-        self.type            : NodeType                 = node_type
-        self.bias            : float                    = bias
-        self.gain            : float                    = gain
-        self._activation     : Callable[[float], float] = activations[activation_name]
-        self._activation_name: str                      = activation_name
-        self._config         : Config                   = config
+        self.id             : int                      = node_id
+        self.type           : NodeType                 = node_type
+        self.bias           : float                    = bias
+        self.gain           : float                    = gain
+        self.activation_name: str                      = activation_name
+        self.activation     : Callable[[float], float] = activations[activation_name]
+        self._config        : Config                   = config
 
     def mutate(self) -> None:
         """
@@ -129,7 +131,7 @@ class NodeGene:
 
     def __repr__(self):
         return (f"NodeGene(node_id={self.id:+03d}, node_type=NodeType.{self.type.name:6s},"
-                f"bias={self.bias}, gain={self.gain}, activation={repr(self._activation)})")
+                f"bias={self.bias}, gain={self.gain}, activation={repr(self.activation)})")
 
     def __str__(self):
         if self.type == NodeType.INPUT:

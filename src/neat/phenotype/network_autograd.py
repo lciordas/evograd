@@ -102,7 +102,7 @@ class NetworkAutograd(NetworkBase):
             node_gene = genome.node_genes[node_id]
             bias_list.append(node_gene.bias)
             gain_list.append(node_gene.gain)
-            activation_names.append(node_gene._activation_name)
+            activation_names.append(node_gene.activation_name)
 
         # Convert to numpy arrays
         self.biases = np.array(bias_list)
