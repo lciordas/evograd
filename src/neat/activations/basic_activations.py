@@ -1,4 +1,4 @@
-import autograd.numpy as np
+import autograd.numpy as np  # type: ignore
 
 def identity_activation(z):
     return z

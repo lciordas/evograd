@@ -4,7 +4,7 @@ NEAT Fast Network Module
 This module implements a high-performance neural network for NEAT optimized for
 batch inference. This implementation (NetworkFast) shares a common architecture
 with NetworkAutograd, however it does not support gradient computation. Due to
-this difference, NetworkFast can performa further optimizations: for example use
+this difference, NetworkFast can perform further optimizations: for example use
 in-place array operations, which are not allowed in the functional programming
 style required when using 'autograd'.
 
@@ -13,11 +13,10 @@ Classes:
 """
 
 import numpy as np
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from neat.genotype import Genome, NodeType
-
+    from neat.genotype import Genome
 from neat.phenotype.network_base import NetworkBase
 
 class NetworkFast(NetworkBase):

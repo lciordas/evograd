@@ -107,7 +107,6 @@ class NetworkAutograd(NetworkBase):
         # Convert to numpy arrays
         self.biases = np.array(bias_list)
         self.gains  = np.array(gain_list)
-        self._activation_names = activation_names
 
         # Store activation functions by index for runtime use
         from neat.activations import activations
@@ -149,13 +148,17 @@ class NetworkAutograd(NetworkBase):
         """
         Set network parameters.
 
+        This overwrites all existing parameters (possibly loaded from genome).
+        This does not overwrite the parameter values stored in the genome,
+        however see 'save_parameters_to_genome()'.
+
         NOTE: This assumes network topology (connection structure) does not change.
         Only parameter VALUES are updated. Topology is fixed after initialization.
 
         Parameters:
             weights: Weight matrix (num_nodes, num_nodes)
-            biases: Bias vector (num_nodes,)
-            gains:  Gain vector (num_nodes,)
+            biases:  Bias vector (num_nodes,)
+            gains:   Gain vector (num_nodes,)
             enforce_bounds: If True, clip parameters to config bounds (default: True)
         """
         if enforce_bounds:
