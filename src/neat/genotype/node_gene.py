@@ -47,22 +47,26 @@ class NodeGene:
     """
 
     def __init__(self,
-                 node_id  : int,
-                 node_type: NodeType,
-                 config   : Config,
-                 bias     : float | None = None,
-                 gain     : float | None = None):
+                 node_id        : int,
+                 node_type      : NodeType,
+                 config         : Config,
+                 bias           : float | None = None,
+                 gain           : float | None = None,
+                 activation_name: str | None = None):
         """
         Initialize a node gene.
         If the 'bias' and 'gain' parameters are not specified, they will be
         initialized with random values, according to the configuration file.
+        If 'activation_name' is not specified, it will use the default from config.
 
         Parameters:
-            node_id:   Unique identifier for this node
-            node_type: Type of node (INPUT, HIDDEN, or OUTPUT)
-            config:    Stores configuration parameters
-            bias:      Bias value added to the node's weighted input
-            gain:      Multiplier applied to the node's weighted input
+            node_id:         Unique identifier for this node
+            node_type:       Type of node (INPUT, HIDDEN, or OUTPUT)
+            config:          Stores configuration parameters
+            bias:            Bias value added to the node's weighted input
+            gain:            Multiplier applied to the node's weighted input
+            activation_name: Name of activation function (e.g., 'tanh', 'relu')
+                           If None, uses config.activation
         """
         if bias is None:
             bias = np.random.normal(config.bias_init_mean, config.bias_init_stdev)
@@ -72,12 +76,16 @@ class NodeGene:
             gain = np.random.normal(config.gain_init_mean, config.gain_init_stdev)
             gain = np.minimum(np.maximum(gain, config.min_gain), config.max_gain)
 
+        # Use provided activation name, or default from config
+        if activation_name is None:
+            activation_name = config.activation
+
         self.id              : int                      = node_id
         self.type            : NodeType                 = node_type
         self.bias            : float                    = bias
         self.gain            : float                    = gain
-        self._activation     : Callable[[float], float] = activations[config.activation]
-        self._activation_name: str                      = config.activation
+        self._activation     : Callable[[float], float] = activations[activation_name]
+        self._activation_name: str                      = activation_name
         self._config         : Config                   = config
 
     def mutate(self) -> None:
