@@ -257,4 +257,14 @@ class Config:
         # and can be inherited by offspring. If False, gradient descent only affects fitness
         # evaluation but learned parameters are not inherited (Baldwin effect).
         self.lamarckian_evolution = get_value('GRADIENT_DESCENT', 'lamarckian_evolution', bool, default=False)
+
+        # [LEGENDRE] (optional section)
+
+        # The number of Legendre polynomial coefficients to use for learnable activation functions.
+        self.num_legendre_coeffs = get_value('LEGENDRE', 'num_legendre_coeffs', int, default=10)
+
+        # The mean and standard deviation of the normal distributions used
+        # to initialize the Legendre polynomial coefficients for new nodes.
+        self.legendre_coeffs_init_mean  = get_value('LEGENDRE', 'legendre_coeffs_init_mean' , float, default=0.0)
+        self.legendre_coeffs_init_stdev = get_value('LEGENDRE', 'legendre_coeffs_init_stdev', float, default=1.0)
     

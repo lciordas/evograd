@@ -37,39 +37,46 @@ class NodeGene:
     The node computes its output as: activation(gain * weighted_input + bias)
 
     Public Attributes:
-        id:              Unique identifier for this node
-        type:            Type of node (INPUT, HIDDEN, or OUTPUT)
-        bias:            Bias value added to the node's weighted input
-        gain:            Multiplier applied to the node's weighted input
-        activation_name: Name of the activation function (e.g., 'tanh', 'relu')
-        activation:      The activation function itself (callable)
+        id:                Unique identifier for this node
+        type:              Type of node (INPUT, HIDDEN, or OUTPUT)
+        bias:              Bias value added to the node's weighted input
+        gain:              Multiplier applied to the node's weighted input
+        activation_name:   Name of the activation function (e.g., 'tanh', 'relu')
+        activation:        The activation function itself (callable)
+        activation_coeffs: Coefficients for learnable activation functions (only for 'legendre')
 
     Public Methods:
         mutate(): Stochastically mutate the bias and gain parameters
     """
 
     def __init__(self,
-                 node_id        : int,
-                 node_type      : NodeType,
-                 config         : Config,
-                 bias           : float | None = None,
-                 gain           : float | None = None,
-                 activation_name: str | None = None):
+                 node_id          : int,
+                 node_type        : NodeType,
+                 config           : Config,
+                 bias             : float      | None = None,
+                 gain             : float      | None = None,
+                 activation_name  : str        | None = None,
+                 activation_coeffs: np.ndarray |None = None):
         """
         Initialize a node gene.
         If the 'bias' and 'gain' parameters are not specified, they will be
         initialized with random values, according to the configuration file.
-        If 'activation_name' is not specified, it will use the default from 
+        If 'activation_name' is not specified, it will use the default from
         the configuration file.
+        If 'activation_coeffs' is not specified and the activation function
+        is 'legendre', they will be initialized with random values according
+        to the configuration file.
 
         Parameters:
-            node_id:         Unique identifier for this node
-            node_type:       Type of node (INPUT, HIDDEN, or OUTPUT)
-            config:          Stores configuration parameters
-            bias:            Bias value added to the node's weighted input
-            gain:            Multiplier applied to the node's weighted input
-            activation_name: Name of activation function (e.g., 'tanh', 'relu')
-                             If None, uses config.activation
+            node_id:           Unique identifier for this node
+            node_type:         Type of node (INPUT, HIDDEN, or OUTPUT)
+            config:            Stores configuration parameters
+            bias:              Bias value added to the node's weighted input
+            gain:              Multiplier applied to the node's weighted input
+            activation_name:   Name of activation function (e.g., 'tanh', 'relu')
+                               If None, uses config.activation
+            activation_coeffs: Coefficients for learnable activation functions
+                               Only used when activation_name is 'legendre'
         """
         if bias is None:
             bias = np.random.normal(config.bias_init_mean, config.bias_init_stdev)
@@ -82,13 +89,19 @@ class NodeGene:
         if activation_name is None:
             activation_name = config.activation
 
-        self.id             : int                      = node_id
-        self.type           : NodeType                 = node_type
-        self.bias           : float                    = bias
-        self.gain           : float                    = gain
-        self.activation_name: str                      = activation_name
-        self.activation     : Callable[[float], float] = activations[activation_name]
-        self._config        : Config                   = config
+        if activation_name == "legendre" and activation_coeffs is None:
+            activation_coeffs = np.random.normal(config.legendre_coeffs_init_mean,
+                                                 config.legendre_coeffs_init_stdev,
+                                                 config.num_legendre_coeffs)
+
+        self.id               : int                      = node_id
+        self.type             : NodeType                 = node_type
+        self.bias             : float                    = bias
+        self.gain             : float                    = gain
+        self.activation_name  : str                      = activation_name
+        self.activation       : Callable[[float], float] = activations[activation_name]
+        self.activation_coeffs: np.ndarray | None        = activation_coeffs
+        self._config          : Config                   = config
 
     def mutate(self) -> None:
         """
@@ -99,6 +112,10 @@ class NodeGene:
         Mutating a parameter can be accomplished in two ways:
          + modifying the current value additively by a small amount
          + replacing the current value by a new one
+
+        NOTE: mutating activation function coefficients (if the activation function
+              is not fixed) is not implemented. Those coefficients can only change
+              via gradient descent. This might change in the future.
         """
 
         # Attempt to mutate the 'bias'
