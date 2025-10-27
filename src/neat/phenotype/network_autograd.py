@@ -206,7 +206,7 @@ class NetworkAutograd(NetworkBase):
         # Learnable activation coefficients are not subject to clipping.
         # We copy them to be consistent with how other parameters are set.
         if coeffs is not None:
-            self._activation_coeffs = {idx: coeffs.copy() for idx, coeffs in coeffs.items()}
+            self.activation_coeffs = {idx: c.copy() for idx, c in coeffs.items()}
 
     def forward_pass(self,
                      inputs:  np.ndarray | list,
@@ -361,8 +361,8 @@ class NetworkAutograd(NetworkBase):
             node_gene.gain = float(self.gains[idx])
 
             # Update activation coefficients if this node has learnable activation
-            if idx in self._activation_coeffs:
-                node_gene.activation_coeffs = self._activation_coeffs[idx].copy()
+            if idx in self.activation_coeffs:
+                node_gene.activation_coeffs = self.activation_coeffs[idx].copy()
 
         # Update connection genes (weights)
         for conn_gene in self._genome.conn_genes.values():
