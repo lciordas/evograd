@@ -11,8 +11,16 @@ class Config:
             config_file: Path to the INI configuration file.
                          If None, creates an empty Config for manual attribute setting.
         """
+
+        # Empty config for testing/manual setup
+        # Set sensible defaults for parameter bounds (no clipping)
         if config_file is None:
-            # Empty config for testing/manual setup
+            self.min_weight = float('-inf')
+            self.max_weight = float('inf')
+            self.min_bias   = float('-inf')
+            self.max_bias   = float('inf')
+            self.min_gain   = float('-inf')
+            self.max_gain   = float('inf')
             return
 
         if not os.path.exists(config_file):
