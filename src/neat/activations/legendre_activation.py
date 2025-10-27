@@ -138,14 +138,9 @@ class LegendreActivation:
             >>> output = activation(z, c)
         """
 
-        # Validate that inputs are numpy arrays to preserve autograd compatibility.
-        # Converting non-arrays to arrays would break gradient computation if they
-        # were being traced by autograd, so we require arrays to be passed in.
-
-        if not isinstance(c, np.ndarray):
-            raise TypeError(f"Coefficients must be a numpy array, got {type(c).__name__}.")
-        if not isinstance(z, np.ndarray):
-            raise TypeError(f"Input z must be a numpy array, got {type(z).__name__}.")
+        # Note: do not validate here that 'z' and 'c' are nd.arrays because they
+        # might not be. For example, during autograd tracing nd.arrays are wrapped 
+        # in ArrayBox objects.
 
         # Validate coefficient dimensions
         if c.size != self.degree + 1:
