@@ -92,20 +92,25 @@ class NodeGene:
             gain = np.minimum(np.maximum(gain, config.min_gain), config.max_gain)
         self.gain: float = gain
 
-        if activation_name is None:
-            activation_name = config.activation
-        self.activation_name: str = activation_name
+        if node_type == NodeType.INPUT:
+            self.activation_name   = None
+            self.activation_coeffs = None
+            self.activation        = None
+        else:
+            if activation_name is None:
+                activation_name = config.activation
+            self.activation_name: str = activation_name
 
-        if activation_name == "legendre" and activation_coeffs is None:
-            activation_coeffs = np.random.normal(config.legendre_coeffs_init_mean,
-                                                 config.legendre_coeffs_init_stdev,
-                                                 config.num_legendre_coeffs)
-        self.activation_coeffs: np.ndarray | None = activation_coeffs
+            if activation_name == "legendre" and activation_coeffs is None:
+                activation_coeffs = np.random.normal(config.legendre_coeffs_init_mean,
+                                                    config.legendre_coeffs_init_stdev,
+                                                    config.num_legendre_coeffs)
+            self.activation_coeffs: np.ndarray | None = activation_coeffs
 
-        # For legendre activation, we don't store a function reference here
-        # because it's a parameterized activation that will be instantiated elsewhere
-        self.activation: Callable[[float], float] | None = \
-            None if activation_name == 'legendre' else activations[activation_name]
+            # For legendre activation, we don't store a function reference here
+            # because it's a parameterized activation that will be instantiated elsewhere
+            self.activation: Callable[[float], float] | None = \
+                None if activation_name == 'legendre' else activations[activation_name]
 
     def mutate(self) -> None:
         """

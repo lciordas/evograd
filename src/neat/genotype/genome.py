@@ -179,7 +179,7 @@ class Genome:
             ID      = node_data["id"]
             bias    = node_data.get("bias", 0.0)
             gain    = node_data.get("gain", 1.0)
-            actname = node_data.get("activation", None)
+            actname = node_data.get("activation", genome_dict["activation"])
             coeffs  = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
 
             node = NodeGene(ID, NodeType.HIDDEN, config, bias, gain, actname, coeffs)
@@ -190,7 +190,7 @@ class Genome:
             ID      = node_data["id"]
             bias    = node_data.get("bias", 0.0)
             gain    = node_data.get("gain", 1.0)
-            actname = node_data.get("activation", None)
+            actname = node_data.get("activation", genome_dict["activation"])
             coeffs  = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
 
             node = NodeGene(ID, NodeType.OUTPUT, config, bias, gain, actname, coeffs)

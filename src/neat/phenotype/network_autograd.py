@@ -132,7 +132,7 @@ class NetworkAutograd(NetworkBase):
                 self.activations.append(LegendreActivation(degree))
                 self.activation_coeffs[idx] = node_gene.activation_coeffs.copy()
             else:
-                self.activations.append(activations[activation_name])
+                self.activations.append(activations.get(activation_name, None))
 
         # Convert input/output IDs to indices
         self._input_indices  = [self._node_id_to_idx[node_id] for node_id in self._input_ids]
