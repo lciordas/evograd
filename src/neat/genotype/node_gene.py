@@ -14,7 +14,7 @@ import random
 from enum   import Enum
 from typing import Callable
 
-from neat.activations import activations
+from neat.activations import activations, LegendreActivation
 from neat.run.config  import Config
 
 class NodeType(Enum):
@@ -44,6 +44,11 @@ class NodeGene:
         activation_name:   Name of the activation function (e.g., 'tanh', 'relu')
         activation:        The activation function itself (callable)
         activation_coeffs: Coefficients for learnable activation functions (only for 'legendre')
+
+    Public Properties:
+        activation_function: Returns a callable activation function (for 'legendre',
+                             creates a callable with fixed coefficients; otherwise
+                             returns the stored activation function)
 
     Public Methods:
         mutate(): Stochastically mutate the bias and gain parameters
@@ -111,6 +116,19 @@ class NodeGene:
             # because it's a parameterized activation that will be instantiated elsewhere
             self.activation: Callable[[float], float] | None = \
                 None if activation_name == 'legendre' else activations[activation_name]
+
+    @property
+    def activation_function(self) -> Callable[[float], float] | None:
+        """
+        Get the activation function for this node.
+
+        Returns:
+           The activation function for the node (None for INPUT nodes).
+        """
+        if self.activation_name == "legendre":
+            return LegendreActivation.from_coeffs(self.activation_coeffs)
+        else:
+            return self.activation
 
     def mutate(self) -> None:
         """

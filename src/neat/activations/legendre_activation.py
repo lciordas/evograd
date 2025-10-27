@@ -83,7 +83,8 @@ class LegendreActivation:
     all input ranges while maintaining autograd compatibility.
 
     Public Methods:
-        __call__(z, c): Apply activation to input z
+        __call__(z, c): Apply activation to input z with variable coefficients
+        from_coeffs(coeffs): Create a callable with fixed coefficients (class method)
 
     Public Attributes:
         degree: Maximum polynomial degree
@@ -159,3 +160,41 @@ class LegendreActivation:
             result = result + coeff * poly(x)
 
         return result
+
+    @classmethod
+    def from_coeffs(cls, coeffs):
+        """
+        Create a callable activation function with fixed coefficients.
+
+        This factory method creates a LegendreActivation instance with
+        pre-specified coefficients, returning a callable that only takes
+        the input 'z' as an argument (coefficients are already fixed).
+
+        Parameters:
+            coeffs: Array of polynomial coefficients of shape (degree+1,)
+                    where degree is inferred from len(coeffs) - 1
+
+        Returns:
+            Callable function f(z) that applies the Legendre activation
+            with the given coefficients
+
+        Example:
+            >>> coeffs = np.array([1.0, 0.5, -0.2])  # degree=2
+            >>> activation_fn = LegendreActivation.from_coeffs(coeffs)
+            >>> z = np.array([0.0, 1.0, 2.0])
+            >>> output = activation_fn(z)  
+        """
+        coeffs = np.asarray(coeffs)
+        degree = len(coeffs) - 1
+
+        if degree > cls._MAX_DEGREE:
+            raise ValueError(f"Degree {degree} exceeds maximum {cls._MAX_DEGREE}")
+
+        # Create instance
+        instance = cls(degree)
+
+        # Return a closure that captures the coefficients
+        def fixed_activation(z):
+            return instance(z, coeffs)
+
+        return fixed_activation
