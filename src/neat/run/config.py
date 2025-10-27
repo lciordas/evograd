@@ -266,6 +266,12 @@ class Config:
         # evaluation but learned parameters are not inherited (Baldwin effect).
         self.lamarckian_evolution = get_value('GRADIENT_DESCENT', 'lamarckian_evolution', bool, default=False)
 
+        # Freeze specific parameter types during gradient descent.
+        self.freeze_weights           = get_value('GRADIENT_DESCENT', 'freeze_weights',           bool, default=False)
+        self.freeze_biases            = get_value('GRADIENT_DESCENT', 'freeze_biases',            bool, default=False)
+        self.freeze_gains             = get_value('GRADIENT_DESCENT', 'freeze_gains',             bool, default=False)
+        self.freeze_activation_coeffs = get_value('GRADIENT_DESCENT', 'freeze_activation_coeffs', bool, default=False)
+
         # [LEGENDRE] (optional section)
 
         # The number of Legendre polynomial coefficients to use for learnable activation functions.

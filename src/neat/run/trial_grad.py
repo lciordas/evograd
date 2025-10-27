@@ -274,6 +274,9 @@ class TrialGrad(Trial):
         This is a pure function that computes optimized parameters without
         modifying the individual, its network, or genome in any way.
 
+        Respects the freeze settings from configuration to selectively prevent
+        updates to certain parameter types during optimization.
+
         Parameters:
             individual: The individual to optimize via gradient descent
 
@@ -285,10 +288,10 @@ class TrialGrad(Trial):
                 - 'initial_fitness':     fitness before gradient descent
                 - 'final_fitness':       fitness after gradient descent
                 - 'fitness_improvement': final_fitness - initial_fitness
-                - 'optimized_weights':   optimized weight matrix
-                - 'optimized_biases':    optimized bias vector
-                - 'optimized_gains':     optimized gain vector
-                - 'optimized_coeffs':    optimized activation coefficients dict
+                - 'optimized_weights':   optimized weight matrix (or original if frozen)
+                - 'optimized_biases':    optimized bias vector (or original if frozen)
+                - 'optimized_gains':     optimized gain vector (or original if frozen)
+                - 'optimized_coeffs':    optimized activation coefficients dict (or original if frozen)
         """
         # Get training data
         inputs, targets = self._get_training_data()
@@ -297,56 +300,130 @@ class TrialGrad(Trial):
         network = individual._network
         weights, biases, gains, activation_coeffs = network.get_parameters()
 
-        # Flatten parameters for Adam optimizer.
-        # Note: 'flat_params' contains copies of 'weights', 'biases', 'gains', and 'activation_coeffs',
-        #        since 'flatten()' and 'concatenate()' create new arrays.
-        flat_coeffs, coeffs_metadata = self._flatten_activation_coeffs(activation_coeffs)
-        flat_params = np.concatenate([weights.flatten(),
-                                      biases.flatten(),
-                                      gains.flatten(),
-                                      flat_coeffs])
+        # Store original parameters for frozen ones
+        original_weights = weights.copy()
+        original_biases  = biases.copy()
+        original_gains   = gains.copy()
+        original_coeffs  = {k: v.copy() for k, v in activation_coeffs.items()} if activation_coeffs else {}
+
+        # Check if all parameters are frozen (skip optimization if so)
+        all_frozen = (self._config.freeze_weights and
+                      self._config.freeze_biases  and
+                      self._config.freeze_gains   and
+                     (self._config.freeze_activation_coeffs or not activation_coeffs))
+
+        if all_frozen:
+            outputs = network.forward_pass(inputs, weights, biases, gains, activation_coeffs)
+            initial_loss = self._loss_function(outputs, targets)
+            initial_fitness = self._loss_to_fitness(initial_loss)
+            return {
+                'initial_loss':        initial_loss,
+                'final_loss':          initial_loss,
+                'loss_improvement':    0.0,
+                'initial_fitness':     initial_fitness,
+                'final_fitness':       initial_fitness,
+                'fitness_improvement': 0.0,
+                'optimized_weights':   original_weights,
+                'optimized_biases':    original_biases,
+                'optimized_gains':     original_gains,
+                'optimized_coeffs':    original_coeffs
+            }
+
+        # Build flattened parameter array with only non-frozen parameters
+        params_to_optimize = []
+        param_info = []  # Track which parameters are included and their shapes
+
         w_size = np.prod(weights.shape)
         b_size = np.prod(biases.shape)
         g_size = np.prod(gains.shape)
 
-        # Define loss function that takes in flattened parameters (that's needed by Adam)
-        # Note: iter parameter is required by adam optimizer but unused here
-        def objective(flat_params, _iter=None):
+        # Add non-frozen parameters to optimization list
+        if not self._config.freeze_weights:
+            params_to_optimize.append(weights.flatten())
+            param_info.append(('weights', weights.shape, w_size))
 
-            # Unflatten parameters
-            w = flat_params[:w_size].reshape(weights.shape)
-            b = flat_params[w_size:w_size + b_size].reshape(biases.shape)
-            g = flat_params[w_size + b_size:w_size + b_size + g_size].reshape(gains.shape)
+        if not self._config.freeze_biases:
+            params_to_optimize.append(biases.flatten())
+            param_info.append(('biases', biases.shape, b_size))
 
-            c_flat = flat_params[w_size + b_size + g_size:]
-            c = self._unflatten_activation_coeffs(c_flat, coeffs_metadata)
+        if not self._config.freeze_gains:
+            params_to_optimize.append(gains.flatten())
+            param_info.append(('gains', gains.shape, g_size))
 
-            # Compute loss
+        flat_coeffs, coeffs_metadata = self._flatten_activation_coeffs(activation_coeffs)
+        if not self._config.freeze_activation_coeffs and len(flat_coeffs) > 0:
+            params_to_optimize.append(flat_coeffs)
+            param_info.append(('coeffs', None, len(flat_coeffs)))
+
+        flat_params_to_optimize = np.concatenate(params_to_optimize)
+
+        # Define loss function that reconstructs full parameter set
+        def objective(opt_params, _iter=None):
+
+            # Reconstruct full parameter set from optimized subset
+            w = original_weights if self._config.freeze_weights else weights
+            b = original_biases  if self._config.freeze_biases  else biases
+            g = original_gains   if self._config.freeze_gains   else gains
+            c = original_coeffs  if self._config.freeze_activation_coeffs else activation_coeffs
+
+            # Update non-frozen parameters from opt_params
+            offset = 0
+            for param_name, shape, size in param_info:
+                if param_name == 'weights':
+                    w = opt_params[offset:offset + size].reshape(shape)
+                elif param_name == 'biases':
+                    b = opt_params[offset:offset + size].reshape(shape)
+                elif param_name == 'gains':
+                    g = opt_params[offset:offset + size].reshape(shape)
+                elif param_name == 'coeffs':
+                    c_flat = opt_params[offset:offset + size]
+                    c = self._unflatten_activation_coeffs(c_flat, coeffs_metadata)
+                offset += size
+
+            # Compute loss with full parameter set
             outputs = network.forward_pass(inputs, w, b, g, c)
             return self._loss_function(outputs, targets)
 
-        # Track initial loss and fitness
-        initial_loss    = objective(flat_params)
+        # Track initial loss and fitness (using original full parameter set)
+        flat_params = np.concatenate([weights.flatten(),
+                                      biases.flatten(),
+                                      gains.flatten(),
+                                      flat_coeffs])
+        initial_loss = objective(flat_params_to_optimize) if len(flat_params_to_optimize) > 0 else objective(flat_params)
         initial_fitness = self._loss_to_fitness(initial_loss)
 
-        # Create gradient function and apply Adam optimizer
+        # Run optimizer
         grad_fn = grad(objective)
-        optimized_params = adam(grad_fn, flat_params,
+        optimized_params = adam(grad_fn, flat_params_to_optimize,
                                 num_iters=self._config.gradient_steps,
                                 step_size=self._config.learning_rate)
 
         # Calculate final loss and fitness
-        final_loss          = objective(optimized_params)
-        loss_improvement    = initial_loss - final_loss
-        final_fitness       = self._loss_to_fitness(final_loss)
+        final_loss = objective(optimized_params) if len(optimized_params) > 0 else initial_loss
+        loss_improvement = initial_loss - final_loss
+        final_fitness = self._loss_to_fitness(final_loss)
         fitness_improvement = final_fitness - initial_fitness
 
-        # Unflatten optimized parameters
-        opt_weights     = optimized_params[:w_size].reshape(weights.shape)
-        opt_biases      = optimized_params[w_size:w_size + b_size].reshape(biases.shape)
-        opt_gains       = optimized_params[w_size + b_size:w_size + b_size + g_size].reshape(gains.shape)
-        opt_coeffs_flat = optimized_params[w_size + b_size + g_size:]
-        opt_coeffs      = self._unflatten_activation_coeffs(opt_coeffs_flat, coeffs_metadata)
+        # Reconstruct full optimized parameters
+        opt_weights = original_weights if self._config.freeze_weights else weights
+        opt_biases  = original_biases  if self._config.freeze_biases  else biases
+        opt_gains   = original_gains   if self._config.freeze_gains   else gains
+        opt_coeffs  = original_coeffs  if self._config.freeze_activation_coeffs else activation_coeffs
+
+        # Extract optimized values for non-frozen parameters
+        if len(optimized_params) > 0:
+            offset = 0
+            for param_name, shape, size in param_info:
+                if param_name == 'weights':
+                    opt_weights = optimized_params[offset:offset + size].reshape(shape)
+                elif param_name == 'biases':
+                    opt_biases = optimized_params[offset:offset + size].reshape(shape)
+                elif param_name == 'gains':
+                    opt_gains = optimized_params[offset:offset + size].reshape(shape)
+                elif param_name == 'coeffs':
+                    opt_coeffs_flat = optimized_params[offset:offset + size]
+                    opt_coeffs = self._unflatten_activation_coeffs(opt_coeffs_flat, coeffs_metadata)
+                offset += size
 
         # Return results
         return {
