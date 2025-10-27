@@ -11,8 +11,16 @@ class Config:
             config_file: Path to the INI configuration file.
                          If None, creates an empty Config for manual attribute setting.
         """
+
+        # Empty config for testing/manual setup
+        # Set sensible defaults for parameter bounds (no clipping)
         if config_file is None:
-            # Empty config for testing/manual setup
+            self.min_weight = float('-inf')
+            self.max_weight = float('inf')
+            self.min_bias   = float('-inf')
+            self.max_bias   = float('inf')
+            self.min_gain   = float('-inf')
+            self.max_gain   = float('inf')
             return
 
         if not os.path.exists(config_file):
@@ -257,4 +265,14 @@ class Config:
         # and can be inherited by offspring. If False, gradient descent only affects fitness
         # evaluation but learned parameters are not inherited (Baldwin effect).
         self.lamarckian_evolution = get_value('GRADIENT_DESCENT', 'lamarckian_evolution', bool, default=False)
+
+        # [LEGENDRE] (optional section)
+
+        # The number of Legendre polynomial coefficients to use for learnable activation functions.
+        self.num_legendre_coeffs = get_value('LEGENDRE', 'num_legendre_coeffs', int, default=10)
+
+        # The mean and standard deviation of the normal distributions used
+        # to initialize the Legendre polynomial coefficients for new nodes.
+        self.legendre_coeffs_init_mean  = get_value('LEGENDRE', 'legendre_coeffs_init_mean' , float, default=0.0)
+        self.legendre_coeffs_init_stdev = get_value('LEGENDRE', 'legendre_coeffs_init_stdev', float, default=1.0)
     

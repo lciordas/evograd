@@ -242,12 +242,12 @@ class TrialGrad(Trial):
                     opt_results['optimized_weights'],
                     opt_results['optimized_biases'],
                     opt_results['optimized_gains'],
-                    enforce_bounds=True
+                    opt_results['optimized_coeffs']
                 )
 
                 # For Lamarckian evolution: save the optimized parameters to genome for inheritance
                 if self._config.lamarckian_evolution:
-                    network.save_parameters_to_genome(enforce_bounds=True)
+                    network.save_parameters_to_genome()
 
             # Update species fitness after gradient improvements
             self._population._species_manager.update_fitness()
@@ -271,7 +271,7 @@ class TrialGrad(Trial):
         """
         Apply gradient descent to optimize an individual's network parameters.
 
-        This is a pure function that computes optimized parameters without 
+        This is a pure function that computes optimized parameters without
         modifying the individual, its network, or genome in any way.
 
         Parameters:
@@ -288,33 +288,41 @@ class TrialGrad(Trial):
                 - 'optimized_weights':   optimized weight matrix
                 - 'optimized_biases':    optimized bias vector
                 - 'optimized_gains':     optimized gain vector
+                - 'optimized_coeffs':    optimized activation coefficients dict
         """
         # Get training data
         inputs, targets = self._get_training_data()
 
-        # Get current network parameters
+        # Get current network parameters (including activation coefficients)
         network = individual._network
-        weights, biases, gains = network.get_parameters()
+        weights, biases, gains, activation_coeffs = network.get_parameters()
 
         # Flatten parameters for Adam optimizer.
-        # Note: 'flat_params' contains copies of 'weights', 'biases' and 'gains',
+        # Note: 'flat_params' contains copies of 'weights', 'biases', 'gains', and 'activation_coeffs',
         #        since 'flatten()' and 'concatenate()' create new arrays.
-        flat_params = np.concatenate([weights.flatten(), biases.flatten(), gains.flatten()])
-        shapes      = (weights.shape, biases.shape, gains.shape)
-        w_size      = np.prod(shapes[0])
-        b_size      = np.prod(shapes[1])
+        flat_coeffs, coeffs_metadata = self._flatten_activation_coeffs(activation_coeffs)
+        flat_params = np.concatenate([weights.flatten(),
+                                      biases.flatten(),
+                                      gains.flatten(),
+                                      flat_coeffs])
+        w_size = np.prod(weights.shape)
+        b_size = np.prod(biases.shape)
+        g_size = np.prod(gains.shape)
 
-        # Define loss function that takes in flattened parameters (that's needed by of Adam)
+        # Define loss function that takes in flattened parameters (that's needed by Adam)
         # Note: iter parameter is required by adam optimizer but unused here
         def objective(flat_params, _iter=None):
 
             # Unflatten parameters
-            w = flat_params[:w_size].reshape(shapes[0])
-            b = flat_params[w_size:w_size + b_size].reshape(shapes[1])
-            g = flat_params[w_size + b_size:].reshape(shapes[2])
+            w = flat_params[:w_size].reshape(weights.shape)
+            b = flat_params[w_size:w_size + b_size].reshape(biases.shape)
+            g = flat_params[w_size + b_size:w_size + b_size + g_size].reshape(gains.shape)
+
+            c_flat = flat_params[w_size + b_size + g_size:]
+            c = self._unflatten_activation_coeffs(c_flat, coeffs_metadata)
 
             # Compute loss
-            outputs = network.forward_pass(inputs, w, b, g)
+            outputs = network.forward_pass(inputs, w, b, g, c)
             return self._loss_function(outputs, targets)
 
         # Track initial loss and fitness
@@ -333,6 +341,13 @@ class TrialGrad(Trial):
         final_fitness       = self._loss_to_fitness(final_loss)
         fitness_improvement = final_fitness - initial_fitness
 
+        # Unflatten optimized parameters
+        opt_weights     = optimized_params[:w_size].reshape(weights.shape)
+        opt_biases      = optimized_params[w_size:w_size + b_size].reshape(biases.shape)
+        opt_gains       = optimized_params[w_size + b_size:w_size + b_size + g_size].reshape(gains.shape)
+        opt_coeffs_flat = optimized_params[w_size + b_size + g_size:]
+        opt_coeffs      = self._unflatten_activation_coeffs(opt_coeffs_flat, coeffs_metadata)
+
         # Return results
         return {
             'initial_loss':        initial_loss,
@@ -341,9 +356,10 @@ class TrialGrad(Trial):
             'initial_fitness':     initial_fitness,
             'final_fitness':       final_fitness,
             'fitness_improvement': fitness_improvement,
-            'optimized_weights':   optimized_params[:w_size].reshape(shapes[0]),
-            'optimized_biases':    optimized_params[w_size:w_size + b_size].reshape(shapes[1]),
-            'optimized_gains':     optimized_params[w_size + b_size:].reshape(shapes[2])
+            'optimized_weights':   opt_weights,
+            'optimized_biases':    opt_biases,
+            'optimized_gains':     opt_gains,
+            'optimized_coeffs':    opt_coeffs
         }
 
     def _select_GD_individuals(self) -> list["Individual"]:
@@ -373,6 +389,71 @@ class TrialGrad(Trial):
 
         else:
             raise ValueError(f"Unknown gradient_selection: {self._config.gradient_selection}")
+
+    def _flatten_activation_coeffs(self, coeffs_dict: dict[int, np.ndarray]) -> tuple[np.ndarray, dict]:
+        """
+        Flatten activation coefficients dictionary into a 1D array for Adam optimizer.
+
+        Parameters:
+            coeffs_dict: Dictionary mapping node_idx => coefficient arrays
+
+        Returns:
+            tuple: (flat_array, metadata)
+                - flat_array: 1D concatenated array of all coefficients
+                - metadata: dict with keys 'node_indices', 'shapes', 'start_indices'
+        """
+        # No learnable activations
+        if not coeffs_dict:
+            return np.array([]), {'node_indices': [], 'shapes': [], 'start_indices': []}
+
+        # Sort by node index for deterministic ordering
+        sorted_items = sorted(coeffs_dict.items())
+        node_indices = [idx          for idx, _    in sorted_items]
+        shapes       = [coeffs.shape for _, coeffs in sorted_items]
+
+        # Concatenate all coefficient arrays (already 1D, no need to flatten)
+        coeffs_list = [coeffs for _, coeffs in sorted_items]
+        flat_array  = np.concatenate(coeffs_list) if coeffs_list else np.array([])
+
+        # Calculate start indices for unflattening
+        start_indices = [0]
+        for shape in shapes[:-1]:
+            start_indices.append(start_indices[-1] + np.prod(shape))
+
+        metadata = {
+            'node_indices': node_indices,
+            'shapes': shapes,
+            'start_indices': start_indices
+        }
+
+        return flat_array, metadata
+
+    def _unflatten_activation_coeffs(self, flat_array: np.ndarray, metadata: dict) -> dict[int, np.ndarray]:
+        """
+        Reconstruct activation coefficients dictionary from flattened array.
+
+        Parameters:
+            flat_array: 1D array containing all coefficients
+            metadata: Dictionary with 'node_indices', 'shapes', 'start_indices'
+
+        Returns:
+            Dictionary mapping node_idx => coefficient arrays
+        """
+        if len(metadata['node_indices']) == 0:
+            return {}
+
+        coeffs_dict = {}
+        node_indices = metadata['node_indices']
+        shapes = metadata['shapes']
+        start_indices = metadata['start_indices']
+
+        for i, node_idx in enumerate(node_indices):
+            start = start_indices[i]
+            size  = np.prod(shapes[i])
+            end   = start + size
+            coeffs_dict[node_idx] = flat_array[start:end].reshape(shapes[i])
+
+        return coeffs_dict
 
     def _report_GD_statistics(self):
         """

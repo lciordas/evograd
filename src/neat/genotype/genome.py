@@ -9,6 +9,7 @@ Classes:
 """
 
 import copy
+import numpy as np
 import random
 from neat.run.config                  import Config
 from neat.genotype.connection_gene    import ConnectionGene
@@ -62,9 +63,9 @@ class Genome:
         Initialize a minimal Genome.
 
         A minimal genome is defined as a genome that describes the smallest possible network:
-        a network consisting of only input and output nodes (whose number never changes and
-        is retrieved from the configuration file) and having no connections. The number of
-        input and output nodes is retrieved from the Config object.
+        a network consisting of only input and output nodes (whose number never changes and is
+        retrieved from the configuration file) and having no connections. The number of input
+        and output nodes is retrieved from the Config object.
 
         Parameters:
             config: Stores configuration parameters
@@ -115,6 +116,9 @@ class Genome:
                     {"from": 3, "to": 2, "weight":  1.5, "enabled": true}
                 ]
             }
+
+        Note: For learnable activations (e.g., "legendre"), nodes may include an
+        optional "activation_coeffs" field with a list of coefficient values.
 
         Node numbering convention (validated by this method):
             - Input nodes:  [0, num_inputs)
@@ -172,18 +176,24 @@ class Genome:
 
         # Add hidden nodes
         for node_data in hidden_nodes:
-            ID   = node_data["id"]
-            bias = node_data.get("bias", 0.0)
-            gain = node_data.get("gain", 1.0)
-            node = NodeGene(ID, NodeType.HIDDEN, config, bias=bias, gain=gain)
+            ID      = node_data["id"]
+            bias    = node_data.get("bias", 0.0)
+            gain    = node_data.get("gain", 1.0)
+            actname = node_data.get("activation", genome_dict["activation"])
+            coeffs  = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
+
+            node = NodeGene(ID, NodeType.HIDDEN, config, bias, gain, actname, coeffs)
             genome.node_genes[ID] = node
 
         # Add output nodes
         for node_data in output_nodes:
-            ID   = node_data["id"]
-            bias = node_data.get("bias", 0.0)
-            gain = node_data.get("gain", 1.0)
-            node = NodeGene(ID, NodeType.OUTPUT, config, bias=bias, gain=gain)
+            ID      = node_data["id"]
+            bias    = node_data.get("bias", 0.0)
+            gain    = node_data.get("gain", 1.0)
+            actname = node_data.get("activation", genome_dict["activation"])
+            coeffs  = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
+
+            node = NodeGene(ID, NodeType.OUTPUT, config, bias, gain, actname, coeffs)
             genome.node_genes[ID] = node
 
         # Add connections and validate network is acyclic
@@ -217,8 +227,12 @@ class Genome:
         """
         Convert the genome to a dictionary representation.
 
-        This is the inverse operation of from_dict(), producing 
+        This is the inverse operation of from_dict(), producing
         a dictionary that can be used to reconstruct the genome.
+
+        Note: For learnable activations (e.g., "legendre"), nodes 
+        include an "activation_coeffs" field with a list of values
+        of the coefficients.
 
         Returns:
             Dictionary with the following structure:
@@ -241,48 +255,57 @@ class Genome:
         # Add input nodes (sorted by ID)
         for node in sorted(self.input_nodes, key=lambda n: n.id):
             nodes.append({
-                "id": node.id,
+                "id"  : node.id,
                 "type": "input"
             })
 
         # Add output nodes (sorted by ID)
         for node in sorted(self.output_nodes, key=lambda n: n.id):
-            nodes.append({
-                "id": node.id,
+            node_dict = {
+                "id"  : node.id,
                 "type": "output",
                 "bias": node.bias,
                 "gain": node.gain
-            })
+            }
+            if node.activation_coeffs is not None:
+                node_dict["activation_coeffs"] = node.activation_coeffs.tolist()
+            nodes.append(node_dict)
 
         # Add hidden nodes (sorted by ID)
         for node in sorted(self.hidden_nodes, key=lambda n: n.id):
-            nodes.append({
-                "id": node.id,
+            node_dict = {
+                "id"  : node.id,
                 "type": "hidden",
                 "bias": node.bias,
                 "gain": node.gain
-            })
+            }
+            if node.activation_coeffs is not None:
+                node_dict["activation_coeffs"] = node.activation_coeffs.tolist()
+            nodes.append(node_dict)
 
         # Build connections list (sorted by innovation number)
         connections = []
         for conn in sorted(self.conn_genes.values(), key=lambda c: c.innovation):
             connections.append({
-                "from": conn.node_in,
-                "to": conn.node_out,
-                "weight": conn.weight,
+                "from"   : conn.node_in,
+                "to"     : conn.node_out,
+                "weight" : conn.weight,
                 "enabled": conn.enabled
             })
 
         # Build final dictionary
         return {
-            "activation": self._config.activation,
-            "nodes": nodes,
+            "activation" : self._config.activation,
+            "nodes"      : nodes,
             "connections": connections
         }
 
     @staticmethod
-    def _validate_node_numbering(input_nodes: list, output_nodes: list, hidden_nodes: list,
-                                num_inputs: int, num_outputs: int) -> None:
+    def _validate_node_numbering(input_nodes : list, 
+                                 output_nodes: list, 
+                                 hidden_nodes: list,
+                                 num_inputs  : int, 
+                                 num_outputs : int) -> None:
         """
         Validate that nodes follow the NEAT numbering convention.
 
@@ -292,11 +315,11 @@ class Genome:
             - Hidden nodes: [num_inputs + num_outputs, ...)
 
         Parameters:
-            input_nodes: List of input node dictionaries
+            input_nodes:  List of input node dictionaries
             output_nodes: List of output node dictionaries
             hidden_nodes: List of hidden node dictionaries
-            num_inputs: Number of input nodes
-            num_outputs: Number of output nodes
+            num_inputs:   Number of input nodes
+            num_outputs:  Number of output nodes
 
         Raises:
             ValueError: If node numbering doesn't follow the convention
@@ -425,33 +448,42 @@ class Genome:
         Calculate the node based component of the genetic distance between this genome and another.
 
         This component is not part of the original NEAT formula.
-        It calculates a component of genetic distance between two networks 
+        It calculates a component of genetic distance between two networks
         by quantifying the parameter difference between the matching nodes.
-        The parameters involved in the calculation are 'bias' and 'gain'.
-        
+        The parameters involved in the calculation are 'bias', 'gain', and
+        'activation_coeffs' (if using legendre activation).
+
         Parameters:
             other: the genome relative to which we are calculating the distance
 
         Returns:
             the nodes based component of the genetic distance between this genome and 'other'
         """
-        
-        # identify the matching nodes in the two networks
+
+        # Identify the matching nodes in the two networks
         node_ids1    = set(self.node_genes.keys())
         node_ids2    = set(other.node_genes.keys())
         matching_ids = node_ids1 & node_ids2
-        
-        # sum up the difference in 'bias' & 'gain' for all matching nodes
+
+        # Sum up the difference in 'bias', 'gain', and 'activation_coeffs' for all matching nodes
         params_diff = 0.0
+        num_params  = 0
         for node_id in matching_ids:
             node1 = self.node_genes [node_id]
             node2 = other.node_genes[node_id]
             params_diff += abs(node1.bias - node2.bias)
             params_diff += abs(node1.gain - node2.gain)
+            num_params  += 2
 
-        # normalize the difference (the '2' factor is needed
-        # because 2 parameters contribute to the difference)
-        params_diff /= 2
+            # Add activation_coeffs difference if using learnable activation
+            if (node1.activation_coeffs is not None and
+                node2.activation_coeffs is not None):
+                params_diff += np.sum(np.abs(node1.activation_coeffs - node2.activation_coeffs))
+                num_params  += len(node1.activation_coeffs)
+
+        # normalize the difference
+        if num_params > 0:
+            params_diff /= num_params
         if matching_ids:
             params_diff /= len(matching_ids)
 
@@ -501,9 +533,9 @@ class Genome:
 
         # Create empty (no node or connection genes) offspring genome
         offspring = Genome.__new__(Genome)
-        offspring._config     = self._config
-        offspring.node_genes  = {}
-        offspring.conn_genes  = {}
+        offspring._config    = self._config
+        offspring.node_genes = {}
+        offspring.conn_genes = {}
 
         # Start by deciding which connections are part of the new network.
         # Once this is decided, the ends of these connections give us the

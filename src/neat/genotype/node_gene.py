@@ -14,8 +14,8 @@ import random
 from enum   import Enum
 from typing import Callable
 
-from neat.activations import activations
-from neat.run.config import Config
+from neat.activations import activations, LegendreActivation
+from neat.run.config  import Config
 
 class NodeType(Enum):
     """
@@ -37,48 +37,98 @@ class NodeGene:
     The node computes its output as: activation(gain * weighted_input + bias)
 
     Public Attributes:
-        id:   Unique identifier for this node
-        type: Type of node (INPUT, HIDDEN, or OUTPUT)
-        bias: Bias value added to the node's weighted input
-        gain: Multiplier applied to the node's weighted input
+        id:                Unique identifier for this node
+        type:              Type of node (INPUT, HIDDEN, or OUTPUT)
+        bias:              Bias value added to the node's weighted input
+        gain:              Multiplier applied to the node's weighted input
+        activation_name:   Name of the activation function (e.g., 'tanh', 'relu')
+        activation:        The activation function itself (callable)
+        activation_coeffs: Coefficients for learnable activation functions (only for 'legendre')
+
+    Public Properties:
+        activation_function: Returns a callable activation function (for 'legendre',
+                             creates a callable with fixed coefficients; otherwise
+                             returns the stored activation function)
 
     Public Methods:
         mutate(): Stochastically mutate the bias and gain parameters
     """
 
     def __init__(self,
-                 node_id  : int,
-                 node_type: NodeType,
-                 config   : Config,
-                 bias     : float | None = None,
-                 gain     : float | None = None):
+                 node_id          : int,
+                 node_type        : NodeType,
+                 config           : Config,
+                 bias             : float      | None = None,
+                 gain             : float      | None = None,
+                 activation_name  : str        | None = None,
+                 activation_coeffs: np.ndarray |None = None):
         """
         Initialize a node gene.
         If the 'bias' and 'gain' parameters are not specified, they will be
         initialized with random values, according to the configuration file.
+        If 'activation_name' is not specified, it will use the default from
+        the configuration file.
+        If 'activation_coeffs' is not specified and the activation function
+        is 'legendre', they will be initialized with random values according
+        to the configuration file.
 
         Parameters:
-            node_id:   Unique identifier for this node
-            node_type: Type of node (INPUT, HIDDEN, or OUTPUT)
-            config:    Stores configuration parameters
-            bias:      Bias value added to the node's weighted input
-            gain:      Multiplier applied to the node's weighted input
+            node_id:           Unique identifier for this node
+            node_type:         Type of node (INPUT, HIDDEN, or OUTPUT)
+            config:            Stores configuration parameters
+            bias:              Bias value added to the node's weighted input
+            gain:              Multiplier applied to the node's weighted input
+            activation_name:   Name of activation function (e.g., 'tanh', 'relu')
+                               If None, uses config.activation
+            activation_coeffs: Coefficients for learnable activation functions
+                               Only used when activation_name is 'legendre'
         """
+        self._config: Config   = config
+        self.id     : int      = node_id
+        self.type   : NodeType = node_type
+
         if bias is None:
             bias = np.random.normal(config.bias_init_mean, config.bias_init_stdev)
             bias = np.minimum(np.maximum(bias, config.min_bias), config.max_bias)
+        self.bias: float = bias
 
         if gain is None:
             gain = np.random.normal(config.gain_init_mean, config.gain_init_stdev)
             gain = np.minimum(np.maximum(gain, config.min_gain), config.max_gain)
+        self.gain: float = gain
 
-        self.id              : int                      = node_id
-        self.type            : NodeType                 = node_type
-        self.bias            : float                    = bias
-        self.gain            : float                    = gain
-        self._activation     : Callable[[float], float] = activations[config.activation]
-        self._activation_name: str                      = config.activation
-        self._config         : Config                   = config
+        if node_type == NodeType.INPUT:
+            self.activation_name   = None
+            self.activation_coeffs = None
+            self.activation        = None
+        else:
+            if activation_name is None:
+                activation_name = config.activation
+            self.activation_name: str = activation_name
+
+            if activation_name == "legendre" and activation_coeffs is None:
+                activation_coeffs = np.random.normal(config.legendre_coeffs_init_mean,
+                                                    config.legendre_coeffs_init_stdev,
+                                                    config.num_legendre_coeffs)
+            self.activation_coeffs: np.ndarray | None = activation_coeffs
+
+            # For legendre activation, we don't store a function reference here
+            # because it's a parameterized activation that will be instantiated elsewhere
+            self.activation: Callable[[float], float] | None = \
+                None if activation_name == 'legendre' else activations[activation_name]
+
+    @property
+    def activation_function(self) -> Callable[[float], float] | None:
+        """
+        Get the activation function for this node.
+
+        Returns:
+           The activation function for the node (None for INPUT nodes).
+        """
+        if self.activation_name == "legendre":
+            return LegendreActivation.from_coeffs(self.activation_coeffs)
+        else:
+            return self.activation
 
     def mutate(self) -> None:
         """
@@ -89,6 +139,10 @@ class NodeGene:
         Mutating a parameter can be accomplished in two ways:
          + modifying the current value additively by a small amount
          + replacing the current value by a new one
+
+        NOTE: mutating activation function coefficients (if the activation function
+              is not fixed) is not implemented. Those coefficients can only change
+              via gradient descent. This might change in the future.
         """
 
         # Attempt to mutate the 'bias'
@@ -121,7 +175,7 @@ class NodeGene:
 
     def __repr__(self):
         return (f"NodeGene(node_id={self.id:+03d}, node_type=NodeType.{self.type.name:6s},"
-                f"bias={self.bias}, gain={self.gain}, activation={repr(self._activation)})")
+                f"bias={self.bias}, gain={self.gain}, activation={repr(self.activation)})")
 
     def __str__(self):
         if self.type == NodeType.INPUT:
