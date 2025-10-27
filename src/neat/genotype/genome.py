@@ -176,20 +176,24 @@ class Genome:
 
         # Add hidden nodes
         for node_data in hidden_nodes:
-            ID     = node_data["id"]
-            bias   = node_data.get("bias", 0.0)
-            gain   = node_data.get("gain", 1.0)
-            coeffs = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None 
-            node   = NodeGene(ID, NodeType.HIDDEN, config, bias=bias, gain=gain, activation_coeffs=coeffs)
+            ID      = node_data["id"]
+            bias    = node_data.get("bias", 0.0)
+            gain    = node_data.get("gain", 1.0)
+            actname = node_data.get("activation", None)
+            coeffs  = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
+
+            node = NodeGene(ID, NodeType.HIDDEN, config, bias, gain, actname, coeffs)
             genome.node_genes[ID] = node
 
         # Add output nodes
         for node_data in output_nodes:
-            ID     = node_data["id"]
-            bias   = node_data.get("bias", 0.0)
-            gain   = node_data.get("gain", 1.0)
-            coeffs = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None 
-            node   = NodeGene(ID, NodeType.OUTPUT, config, bias=bias, gain=gain, activation_coeffs=coeffs)
+            ID      = node_data["id"]
+            bias    = node_data.get("bias", 0.0)
+            gain    = node_data.get("gain", 1.0)
+            actname = node_data.get("activation", None)
+            coeffs  = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
+
+            node = NodeGene(ID, NodeType.OUTPUT, config, bias, gain, actname, coeffs)
             genome.node_genes[ID] = node
 
         # Add connections and validate network is acyclic
