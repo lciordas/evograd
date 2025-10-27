@@ -78,30 +78,34 @@ class NodeGene:
             activation_coeffs: Coefficients for learnable activation functions
                                Only used when activation_name is 'legendre'
         """
+        self._config: Config   = config
+        self.id     : int      = node_id
+        self.type   : NodeType = node_type
+
         if bias is None:
             bias = np.random.normal(config.bias_init_mean, config.bias_init_stdev)
             bias = np.minimum(np.maximum(bias, config.min_bias), config.max_bias)
+        self.bias: float = bias
 
         if gain is None:
             gain = np.random.normal(config.gain_init_mean, config.gain_init_stdev)
             gain = np.minimum(np.maximum(gain, config.min_gain), config.max_gain)
+        self.gain: float = gain
 
         if activation_name is None:
             activation_name = config.activation
+        self.activation_name: str = activation_name
 
         if activation_name == "legendre" and activation_coeffs is None:
             activation_coeffs = np.random.normal(config.legendre_coeffs_init_mean,
                                                  config.legendre_coeffs_init_stdev,
                                                  config.num_legendre_coeffs)
+        self.activation_coeffs: np.ndarray | None = activation_coeffs
 
-        self.id               : int                      = node_id
-        self.type             : NodeType                 = node_type
-        self.bias             : float                    = bias
-        self.gain             : float                    = gain
-        self.activation_name  : str                      = activation_name
-        self.activation       : Callable[[float], float] = activations[activation_name]
-        self.activation_coeffs: np.ndarray | None        = activation_coeffs
-        self._config          : Config                   = config
+        # For legendre activation, we don't store a function reference here
+        # because it's a parameterized activation that will be instantiated elsewhere
+        self.activation: Callable[[float], float] | None = \
+            None if activation_name == 'legendre' else activations[activation_name]
 
     def mutate(self) -> None:
         """
