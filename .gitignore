@@ -109,7 +109,6 @@ Desktop.ini
 
 # Configuration files (keep templates in configs/)
 *.ini
-!configs/*.ini
 
 # Data and output files
 *.pdf
