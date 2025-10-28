@@ -90,7 +90,7 @@ class NetworkFast(NetworkBase):
         # Note: These functions are already vectorized (they use NumPy operations)
         # and work natively on arrays, so no np.vectorize wrapper is needed
         from neat.activations import activations
-        self._activations = [activations[name] for name in activation_names]
+        self._activations = [activations.get(name, None) for name in activation_names]
 
         # Convert input/output IDs to indices
         self._input_indices  = np.array([self._node_id_to_idx[node_id] for node_id in self._input_ids], dtype=np.int32)
