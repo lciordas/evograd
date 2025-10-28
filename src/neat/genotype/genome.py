@@ -103,11 +103,11 @@ class Genome:
 
         Dictionary format:
             {
-                "activation": "sigmoid",  # activation function name
+                "activation": "sigmoid",  # optional: default activation function name for all nodes
                 "nodes": [
                     {"id": 0, "type": "input"},
                     {"id": 1, "type": "input"},
-                    {"id": 2, "type": "output", "bias": 0.0, "gain": 1.0},
+                    {"id": 2, "type": "output", "bias": 0.0, "gain": 1.0, "activation": "tanh"},  # optional per-node activation
                     {"id": 3, "type": "hidden", "bias": 0.5, "gain": 1.0}
                 ],
                 "connections": [
@@ -117,8 +117,15 @@ class Genome:
                 ]
             }
 
-        Note: For learnable activations (e.g., "legendre"), nodes may include an
-        optional "activation_coeffs" field with a list of coefficient values.
+        Note:
+            - The "activation" field at the network level is optional and provides a default
+              for all nodes that don't specify their own activation function.
+            - Each node (output/hidden) can optionally specify its own "activation" field,
+              which takes precedence over the network-level default.
+            - If a node doesn't have an activation specified and there's no network-level
+              default, a ValueError will be raised.
+            - For learnable activations (e.g., "legendre"), nodes may include an
+              optional "activation_coeffs" field with a list of coefficient values.
 
         Node numbering convention (validated by this method):
             - Input nodes:  [0, num_inputs)
@@ -151,11 +158,13 @@ class Genome:
         # Validate node numbering convention
         cls._validate_node_numbering(input_nodes, output_nodes, hidden_nodes, num_inputs, num_outputs)
 
+        # Get optional network-level default activation
+        network_activation = genome_dict.get("activation", None)
+
         # Create minimal Config object with necessary fields
         config = Config(config_file=None)
         config.num_inputs         = num_inputs
         config.num_outputs        = num_outputs
-        config.activation         = genome_dict["activation"]
         config.initial_cxn_policy = "none"
 
         # Initialize InnovationTracker for this genome
@@ -164,7 +173,7 @@ class Genome:
 
         # Create empty genome
         genome = cls.__new__(cls)
-        genome._config = config
+        genome._config    = config
         genome.node_genes = {}
         genome.conn_genes = {}
 
@@ -176,22 +185,30 @@ class Genome:
 
         # Add hidden nodes
         for node_data in hidden_nodes:
-            ID      = node_data["id"]
-            bias    = node_data.get("bias", 0.0)
-            gain    = node_data.get("gain", 1.0)
-            actname = node_data.get("activation", genome_dict["activation"])
-            coeffs  = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
+            ID     = node_data["id"]
+            bias   = node_data.get("bias", 0.0)
+            gain   = node_data.get("gain", 1.0)
+            coeffs = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
+
+            # Try to get activation: first from node, then from network default
+            actname = node_data.get("activation", network_activation)
+            if actname is None:
+                raise ValueError(f"No activation specified for hidden node {ID}.")
 
             node = NodeGene(ID, NodeType.HIDDEN, config, bias, gain, actname, coeffs)
             genome.node_genes[ID] = node
 
         # Add output nodes
         for node_data in output_nodes:
-            ID      = node_data["id"]
-            bias    = node_data.get("bias", 0.0)
-            gain    = node_data.get("gain", 1.0)
-            actname = node_data.get("activation", genome_dict["activation"])
-            coeffs  = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
+            ID     = node_data["id"]
+            bias   = node_data.get("bias", 0.0)
+            gain   = node_data.get("gain", 1.0)
+            coeffs = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
+
+            # Try to get activation: first from node, then from network default
+            actname = node_data.get("activation", network_activation)
+            if actname is None:
+                raise ValueError(f"No activation specified for outout node {ID}.")
 
             node = NodeGene(ID, NodeType.OUTPUT, config, bias, gain, actname, coeffs)
             genome.node_genes[ID] = node
@@ -230,18 +247,19 @@ class Genome:
         This is the inverse operation of from_dict(), producing
         a dictionary that can be used to reconstruct the genome.
 
-        Note: For learnable activations (e.g., "legendre"), nodes 
-        include an "activation_coeffs" field with a list of values
-        of the coefficients.
+        Note:
+            - Each output/hidden node includes its "activation" field with the activation function name.
+            - For learnable activations (e.g., "legendre"), nodes also include an "activation_coeffs"
+              field with a list of coefficient values.
+            - No network-level "activation" field is saved; each node stores its own activation.
 
         Returns:
             Dictionary with the following structure:
             {
-                "activation": "sigmoid",  # activation function name
                 "nodes": [
                     {"id": 0, "type": "input"},
-                    {"id": 1, "type": "output", "bias": 0.0, "gain": 1.0},
-                    {"id": 2, "type": "hidden", "bias": 0.5, "gain": 1.0}
+                    {"id": 1, "type": "output", "bias": 0.0, "gain": 1.0, "activation": "sigmoid"},
+                    {"id": 2, "type": "hidden", "bias": 0.5, "gain": 1.0, "activation": "tanh"}
                 ],
                 "connections": [
                     {"from": 0, "to": 2, "weight":  0.5, "enabled": true},
@@ -262,10 +280,11 @@ class Genome:
         # Add output nodes (sorted by ID)
         for node in sorted(self.output_nodes, key=lambda n: n.id):
             node_dict = {
-                "id"  : node.id,
-                "type": "output",
-                "bias": node.bias,
-                "gain": node.gain
+                "id"        : node.id,
+                "type"      : "output",
+                "bias"      : node.bias,
+                "gain"      : node.gain,
+                "activation": node.activation_name
             }
             if node.activation_coeffs is not None:
                 node_dict["activation_coeffs"] = node.activation_coeffs.tolist()
@@ -274,10 +293,11 @@ class Genome:
         # Add hidden nodes (sorted by ID)
         for node in sorted(self.hidden_nodes, key=lambda n: n.id):
             node_dict = {
-                "id"  : node.id,
-                "type": "hidden",
-                "bias": node.bias,
-                "gain": node.gain
+                "id"        : node.id,
+                "type"      : "hidden",
+                "bias"      : node.bias,
+                "gain"      : node.gain,
+                "activation": node.activation_name
             }
             if node.activation_coeffs is not None:
                 node_dict["activation_coeffs"] = node.activation_coeffs.tolist()
@@ -295,7 +315,6 @@ class Genome:
 
         # Build final dictionary
         return {
-            "activation" : self._config.activation,
             "nodes"      : nodes,
             "connections": connections
         }
