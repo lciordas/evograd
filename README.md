@@ -66,7 +66,7 @@ class XORTrial(Trial):
             print(f"Generation {self.generation}: Best fitness = {self.best_fitness:.4f}")
 
 # Load configuration
-config = Config("configs/config_xor.ini")
+config = Config("examples/configs/config_xor.ini")
 
 # Run trial
 trial = XORTrial(config, network_type='standard')
@@ -143,7 +143,7 @@ Configuration files use INI format with the following sections:
 - `[STRUCTURAL_MUTATIONS]` - Structural mutation probabilities
 - `[GRADIENT_DESCENT]` - Optional gradient descent parameters
 
-See `configs/` directory for example configurations.
+See `examples/configs/` directory for example configurations.
 
 ## Examples
 

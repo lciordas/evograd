@@ -25,19 +25,19 @@ EXAMPLES = {
     'xor': {
         'trial': XORTrial,
         'experiment': XORExperiment,
-        'config': 'configs/config_xor.ini',
+        'config': 'examples/configs/config_xor.ini',
         'description': 'XOR logic problem'
     },
     'regression1d': {
         'trial': RegressionTrial1D,
         'experiment': RegressionExperiment1D,
-        'config': 'configs/config_regression1D.ini',
+        'config': 'examples/configs/config_regression1D.ini',
         'description': '1D function regression'
     },
     'cartpole': {
         'trial': CartPoleTrial,
         'experiment': CartPoleExperiment,
-        'config': 'configs/config_gymnasium.ini',
+        'config': 'examples/configs/config_gymnasium.ini',
         'description': 'CartPole control problem'
     }
 }
