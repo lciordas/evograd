@@ -75,10 +75,6 @@ class Config:
         # Use "None" if not applicable.
         self.initial_cxn_fraction = get_value('POPULATION_INIT', 'initial_cxn_fraction', float)
 
-        # The activation function assigned to each node.
-        # For the list of all available choices, see the 'activation' module.
-        self.activation = get_value('POPULATION_INIT', 'activation', str)
-
         # [SPECIATION]
 
         # Individuals whose genomic distance is less than this
@@ -153,6 +149,12 @@ class Config:
         self.max_number_generations = get_value('TERMINATION', 'max_number_generations', int)
 
         # [NODE]
+
+        # Activation function for nodes. Options:
+        #   - Function name: all nodes use the same activation (basic functions like sigmoid/relu/tanh, or learnable "legendre")
+        #   - "random": each node randomly assigned an activation function
+        #   - "random-fixed": each node randomly assigned a non-learnable activation (excludes "legendre")
+        self.activation = get_value('NODE', 'activation', str)
 
         # The mean and standard deviation of the normal distributions
         # used to initialize the 'bias' & 'gain' parameters for new nodes.
