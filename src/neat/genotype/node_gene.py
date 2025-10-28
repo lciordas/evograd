@@ -61,7 +61,7 @@ class NodeGene:
                  bias             : float      | None = None,
                  gain             : float      | None = None,
                  activation_name  : str        | None = None,
-                 activation_coeffs: np.ndarray |None = None):
+                 activation_coeffs: np.ndarray | None = None):
         """
         Initialize a node gene.
         If the 'bias' and 'gain' parameters are not specified, they will be
@@ -78,8 +78,10 @@ class NodeGene:
             config:            Stores configuration parameters
             bias:              Bias value added to the node's weighted input
             gain:              Multiplier applied to the node's weighted input
-            activation_name:   Name of activation function (e.g., 'tanh', 'relu')
-                               If None, uses config.activation
+            activation_name:   Name of activation function (e.g., 'tanh', 'relu', 'legendre')
+                               If None, uses value from 'config.activation'
+                               Special values: "random" (randomly select any activation),
+                                               "random-fixed" (randomly select non-learnable activation)
             activation_coeffs: Coefficients for learnable activation functions
                                Only used when activation_name is 'legendre'
         """
@@ -104,12 +106,20 @@ class NodeGene:
         else:
             if activation_name is None:
                 activation_name = config.activation
+
+            # Handle "random" and "random-fixed" activation selection
+            if activation_name == "random":
+                all_activations = list(activations.keys()) + ["legendre"]
+                activation_name = random.choice(all_activations)
+            elif activation_name == "random-fixed":
+                activation_name = random.choice(list(activations.keys()))
+
             self.activation_name: str = activation_name
 
             if activation_name == "legendre" and activation_coeffs is None:
                 activation_coeffs = np.random.normal(config.legendre_coeffs_init_mean,
-                                                    config.legendre_coeffs_init_stdev,
-                                                    config.num_legendre_coeffs)
+                                                     config.legendre_coeffs_init_stdev,
+                                                     config.num_legendre_coeffs)
             self.activation_coeffs: np.ndarray | None = activation_coeffs
 
             # For legendre activation, we don't store a function reference here

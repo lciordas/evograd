@@ -103,12 +103,12 @@ class Genome:
 
         Dictionary format:
             {
-                "activation": "sigmoid",  # activation function name
+                "activation": "sigmoid",  # Optional global activation for all nodes
                 "nodes": [
                     {"id": 0, "type": "input"},
                     {"id": 1, "type": "input"},
                     {"id": 2, "type": "output", "bias": 0.0, "gain": 1.0},
-                    {"id": 3, "type": "hidden", "bias": 0.5, "gain": 1.0}
+                    {"id": 3, "type": "hidden", "bias": 0.5, "gain": 1.0, "activation": "relu"}
                 ],
                 "connections": [
                     {"from": 0, "to": 3, "weight":  0.5, "enabled": true},
@@ -116,6 +116,12 @@ class Genome:
                     {"from": 3, "to": 2, "weight":  1.5, "enabled": true}
                 ]
             }
+
+        Activation function resolution:
+        - Each node (hidden/output) first looks for its own "activation" field
+        - If not found, uses the global "activation" field
+        - If neither exists, raises ValueError
+        - Node-specific activations override the global activation
 
         Note: For learnable activations (e.g., "legendre"), nodes may include an
         optional "activation_coeffs" field with a list of coefficient values.
@@ -155,7 +161,7 @@ class Genome:
         config = Config(config_file=None)
         config.num_inputs         = num_inputs
         config.num_outputs        = num_outputs
-        config.activation         = genome_dict["activation"]
+        config.activation         = genome_dict.get("activation")  
         config.initial_cxn_policy = "none"
 
         # Initialize InnovationTracker for this genome
@@ -164,7 +170,7 @@ class Genome:
 
         # Create empty genome
         genome = cls.__new__(cls)
-        genome._config = config
+        genome._config    = config
         genome.node_genes = {}
         genome.conn_genes = {}
 
@@ -176,23 +182,35 @@ class Genome:
 
         # Add hidden nodes
         for node_data in hidden_nodes:
-            ID      = node_data["id"]
-            bias    = node_data.get("bias", 0.0)
-            gain    = node_data.get("gain", 1.0)
-            actname = node_data.get("activation", genome_dict["activation"])
-            coeffs  = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
+            ID     = node_data["id"]
+            bias   = node_data.get("bias", 0.0)
+            gain   = node_data.get("gain", 1.0)
+            coeffs = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
+
+            if "activation" in node_data:
+                actname = node_data["activation"]
+            elif "activation" in genome_dict:
+                actname = genome_dict["activation"]
+            else:
+                raise ValueError(f"No activation function specified for hidden node {ID}.")
 
             node = NodeGene(ID, NodeType.HIDDEN, config, bias, gain, actname, coeffs)
             genome.node_genes[ID] = node
 
         # Add output nodes
         for node_data in output_nodes:
-            ID      = node_data["id"]
-            bias    = node_data.get("bias", 0.0)
-            gain    = node_data.get("gain", 1.0)
-            actname = node_data.get("activation", genome_dict["activation"])
-            coeffs  = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
+            ID     = node_data["id"]
+            bias   = node_data.get("bias", 0.0)
+            gain   = node_data.get("gain", 1.0)
+            coeffs = np.array(node_data["activation_coeffs"]) if "activation_coeffs" in node_data else None
 
+            if "activation" in node_data:
+                actname = node_data["activation"]
+            elif "activation" in genome_dict:
+                actname = genome_dict["activation"]
+            else:
+                raise ValueError(f"No activation function specified for output node {ID}.")
+            
             node = NodeGene(ID, NodeType.OUTPUT, config, bias, gain, actname, coeffs)
             genome.node_genes[ID] = node
 
@@ -230,18 +248,25 @@ class Genome:
         This is the inverse operation of from_dict(), producing
         a dictionary that can be used to reconstruct the genome.
 
-        Note: For learnable activations (e.g., "legendre"), nodes 
+        Activation function serialization:
+        - Global "activation" field contains the config activation (may be missing)
+        - Nodes include "activation" field only if:
+          - Their activation differs from the global activation, OR
+          - No global activation is defined
+        - This preserves heterogeneous networks (e.g., from "random" activation)
+
+        Note: For learnable activations (e.g., "legendre"), nodes
         include an "activation_coeffs" field with a list of values
         of the coefficients.
 
         Returns:
             Dictionary with the following structure:
             {
-                "activation": "sigmoid",  # activation function name
+                "activation": "sigmoid",  # Global activation (optional)
                 "nodes": [
                     {"id": 0, "type": "input"},
                     {"id": 1, "type": "output", "bias": 0.0, "gain": 1.0},
-                    {"id": 2, "type": "hidden", "bias": 0.5, "gain": 1.0}
+                    {"id": 2, "type": "hidden", "bias": 0.5, "gain": 1.0, "activation": "relu"}
                 ],
                 "connections": [
                     {"from": 0, "to": 2, "weight":  0.5, "enabled": true},
@@ -267,6 +292,9 @@ class Genome:
                 "bias": node.bias,
                 "gain": node.gain
             }
+            # Include node-specific activation if different from global or if no global activation
+            if node.activation_name != self._config.activation or self._config.activation is None:
+                node_dict["activation"] = node.activation_name
             if node.activation_coeffs is not None:
                 node_dict["activation_coeffs"] = node.activation_coeffs.tolist()
             nodes.append(node_dict)
@@ -279,6 +307,9 @@ class Genome:
                 "bias": node.bias,
                 "gain": node.gain
             }
+            # Include node-specific activation if different from global or if no global activation
+            if node.activation_name != self._config.activation or self._config.activation is None:
+                node_dict["activation"] = node.activation_name
             if node.activation_coeffs is not None:
                 node_dict["activation_coeffs"] = node.activation_coeffs.tolist()
             nodes.append(node_dict)
@@ -294,11 +325,14 @@ class Genome:
             })
 
         # Build final dictionary
-        return {
-            "activation" : self._config.activation,
+        result = {
             "nodes"      : nodes,
             "connections": connections
         }
+        if self._config.activation is not None:
+            result["activation"] = self._config.activation
+
+        return result
 
     @staticmethod
     def _validate_node_numbering(input_nodes : list, 
