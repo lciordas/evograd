@@ -101,6 +101,11 @@ class Config:
         # coming from the difference in parameters of homologous nodes.
         self.distance_includes_nodes = get_value('SPECIATION', 'distance_includes_nodes', bool)
 
+        # Scaling factor for tanh activation distance calculation.
+        # When both nodes have legendre activation, distance = tanh(k * mean_coeff_diff).
+        # Higher k makes the distance more sensitive to coefficient differences.
+        self.activation_distance_k = get_value('SPECIATION', 'activation_distance_k', float, default=3.0)
+
         # [REPRODUCTION]
 
         # The number of most-fit individuals in each species that
