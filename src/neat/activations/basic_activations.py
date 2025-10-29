@@ -10,23 +10,47 @@ def relu_activation(z):
     return np.maximum(0.0, z)
 
 def sigmoid_activation(z):
-    # Use soft clamping via tanh for smoother gradients (autograd-friendly)
-    # This avoids hard boundaries that cause gradient issues
-    z_scaled = 5.0 * z
-    z_clamped = 60.0 * np.tanh(z_scaled / 60.0)
-    return 1.0 / (1.0 + np.exp(-z_clamped))
+    return 1.0 / (1.0 + np.exp(-z))
 
 def tanh_activation(z):
-    # Use soft clamping for smoother gradients (autograd-friendly)
-    # Nested tanh provides smooth transition instead of hard clipping
-    z_scaled = 2.5 * z
-    z_clamped = 60.0 * np.tanh(z_scaled / 60.0)
-    return np.tanh(z_clamped)
+    return np.tanh(z)
+
+def sin_activation(z):
+    return np.sin(z)
+
+def square_activation(z):
+    return z ** 2
+
+def cubed_activation(z):
+    return z ** 3
+
+def log_activation(z):
+    # Returns '-inf' if z=0.
+    return np.log(z)
+
+def inverse_activation(z):
+    try:
+        return 1/z
+    except ZeroDivisionError:
+        return np.inf
+
+def exponential_activation(z):
+    return np.exp(z)
+
+def abs_activation(z):
+    return np.abs(z)
 
 activations = {
-    "identity": identity_activation,
-    "clamped" : clamped_activation,
-    "relu"    : relu_activation,
-    "sigmoid" : sigmoid_activation,
-    "tanh"    : tanh_activation
+    "identity"   : identity_activation,
+    "clamped"    : clamped_activation,
+    "relu"       : relu_activation,
+    "sigmoid"    : sigmoid_activation,
+    "tanh"       : tanh_activation,
+    "sin"        : sin_activation,
+    "square"     : square_activation,
+    "cubed"      : cubed_activation,
+    "log"        : log_activation,
+    "inverse"    : inverse_activation,
+    "exponential": exponential_activation,
+    "abs"        : abs_activation
     }

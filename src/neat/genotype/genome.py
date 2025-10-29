@@ -157,11 +157,14 @@ class Genome:
         # Validate node numbering convention
         cls._validate_node_numbering(input_nodes, output_nodes, hidden_nodes, num_inputs, num_outputs)
 
+        # Get optional network-level default activation
+        network_activation = genome_dict.get("activation", None)
+
         # Create minimal Config object with necessary fields
         config = Config(config_file=None)
         config.num_inputs         = num_inputs
         config.num_outputs        = num_outputs
-        config.activation         = genome_dict.get("activation")  
+        config.activation         = genome_dict.get("activation")
         config.initial_cxn_policy = "none"
 
         # Initialize InnovationTracker for this genome
@@ -210,7 +213,7 @@ class Genome:
                 actname = genome_dict["activation"]
             else:
                 raise ValueError(f"No activation function specified for output node {ID}.")
-            
+
             node = NodeGene(ID, NodeType.OUTPUT, config, bias, gain, actname, coeffs)
             genome.node_genes[ID] = node
 
@@ -287,10 +290,11 @@ class Genome:
         # Add output nodes (sorted by ID)
         for node in sorted(self.output_nodes, key=lambda n: n.id):
             node_dict = {
-                "id"  : node.id,
-                "type": "output",
-                "bias": node.bias,
-                "gain": node.gain
+                "id"        : node.id,
+                "type"      : "output",
+                "bias"      : node.bias,
+                "gain"      : node.gain,
+                "activation": node.activation_name
             }
             # Include node-specific activation if different from global or if no global activation
             if node.activation_name != self._config.activation or self._config.activation is None:
@@ -302,10 +306,11 @@ class Genome:
         # Add hidden nodes (sorted by ID)
         for node in sorted(self.hidden_nodes, key=lambda n: n.id):
             node_dict = {
-                "id"  : node.id,
-                "type": "hidden",
-                "bias": node.bias,
-                "gain": node.gain
+                "id"        : node.id,
+                "type"      : "hidden",
+                "bias"      : node.bias,
+                "gain"      : node.gain,
+                "activation": node.activation_name
             }
             # Include node-specific activation if different from global or if no global activation
             if node.activation_name != self._config.activation or self._config.activation is None:
@@ -484,8 +489,8 @@ class Genome:
         This component is not part of the original NEAT formula.
         It calculates a component of genetic distance between two networks
         by quantifying the parameter difference between the matching nodes.
-        The parameters involved in the calculation are 'bias', 'gain', and
-        'activation_coeffs' (if using legendre activation).
+        The parameters involved in the calculation are 'bias', 'gain',
+        'activation_coeffs' (if using legendre activation), and activation function type.
 
         Parameters:
             other: the genome relative to which we are calculating the distance
@@ -499,21 +504,34 @@ class Genome:
         node_ids2    = set(other.node_genes.keys())
         matching_ids = node_ids1 & node_ids2
 
-        # Sum up the difference in 'bias', 'gain', and 'activation_coeffs' for all matching nodes
+        # Sum up the difference in 'bias', 'gain', 'activation_coeffs'
+        # and activation type for all matching nodes
         params_diff = 0.0
         num_params  = 0
         for node_id in matching_ids:
             node1 = self.node_genes [node_id]
             node2 = other.node_genes[node_id]
+
+            # Distance due to parameter difference
             params_diff += abs(node1.bias - node2.bias)
             params_diff += abs(node1.gain - node2.gain)
             num_params  += 2
 
-            # Add activation_coeffs difference if using learnable activation
-            if (node1.activation_coeffs is not None and
-                node2.activation_coeffs is not None):
-                params_diff += np.sum(np.abs(node1.activation_coeffs - node2.activation_coeffs))
-                num_params  += len(node1.activation_coeffs)
+            # Distance due to activation function difference
+            if node1.activation_name != node2.activation_name:
+
+                # Different activation types: add 1.0
+                params_diff += 1.0
+                num_params  += 1
+
+            elif node1.activation_name == 'legendre':
+
+                # Same activation type (both legendre): compare coefficients.
+                # Calculate mean absolute difference and map to [0, 1] via tanh(k * mean_diff)
+                # where k is a configurable scaling factor that controls sensitivity
+                mean_coeff_diff = np.mean(np.abs(node1.activation_coeffs - node2.activation_coeffs))
+                params_diff    += np.tanh(self._config.activation_distance_k * mean_coeff_diff)
+                num_params     += 1
 
         # normalize the difference
         if num_params > 0:

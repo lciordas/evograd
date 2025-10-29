@@ -1,5 +1,6 @@
 import configparser
 import os
+from neat.activations import activations
 
 class Config:
 
@@ -100,6 +101,11 @@ class Config:
         # coming from the difference in parameters of homologous nodes.
         self.distance_includes_nodes = get_value('SPECIATION', 'distance_includes_nodes', bool)
 
+        # Scaling factor for tanh activation distance calculation.
+        # When both nodes have legendre activation, distance = tanh(k * mean_coeff_diff).
+        # Higher k makes the distance more sensitive to coefficient differences.
+        self.activation_distance_k = get_value('SPECIATION', 'activation_distance_k', float, default=3.0)
+
         # [REPRODUCTION]
 
         # The number of most-fit individuals in each species that
@@ -150,11 +156,10 @@ class Config:
 
         # [NODE]
 
-        # Activation function for nodes. Options:
-        #   - Function name: all nodes use the same activation (basic functions like sigmoid/relu/tanh, or learnable "legendre")
-        #   - "random": each node randomly assigned an activation function
-        #   - "random-fixed": each node randomly assigned a non-learnable activation (excludes "legendre")
-        self.activation = get_value('NODE', 'activation', str)
+        # Activation function for nodes. 
+        # Options: basic functions like sigmoid/relu/tanh (see 'basic_activations.py'), 
+        #          or learnable (for now only "legendre").
+        self.activation_initial = get_value('NODE', 'activation_initial', str)
 
         # The mean and standard deviation of the normal distributions
         # used to initialize the 'bias' & 'gain' parameters for new nodes.
@@ -184,6 +189,25 @@ class Config:
         # from which a 'bias' and a 'gain' perturbation value is drawn.
         self.bias_perturb_strength = get_value('NODE', 'bias_perturb_strength', float)
         self.gain_perturb_strength = get_value('NODE', 'gain_perturb_strength', float)
+
+        # The probability that mutation will change the activation function of a node.
+        self.activation_mutate_prob = get_value('NODE', 'activation_mutate_prob', float, default=0.0)
+
+        # Which activation functions are available for mutation.
+        # Options: "all" (all activations), "fixed" (non-learnable only), or comma-separated list
+        raw_options = get_value('NODE', 'activation_options', str, default='all')
+        if raw_options == 'all':
+            self.activation_options = list(activations.keys()) + ['legendre']
+        elif raw_options == 'fixed':
+            self.activation_options = list(activations.keys())  # excludes legendre
+        else:
+            # Parse comma-separated list
+            self.activation_options = [opt.strip() for opt in raw_options.split(',')]
+            # Validate that all options are valid
+            all_valid = list(activations.keys()) + ['legendre']
+            for opt in self.activation_options:
+                if opt not in all_valid:
+                    raise ValueError(f"Invalid activation function '{opt}' in activation_options")
 
         # [CONNECTION]
 

@@ -145,14 +145,14 @@ class NodeGene:
         Stochastically mutate the (gene describing the) node.
 
         Both whether a mutation occurs and its nature & magnitude are stochastic.
-        For a node gene, mutating means changing the 'bias' and 'gain' parameters.
-        Mutating a parameter can be accomplished in two ways:
+        For a node gene, mutating means changing the 'bias', 'gain', and 'activation'
+        parameters. Mutating bias/gain can be accomplished in two ways:
          + modifying the current value additively by a small amount
          + replacing the current value by a new one
 
-        NOTE: mutating activation function coefficients (if the activation function
-              is not fixed) is not implemented. Those coefficients can only change
-              via gradient descent. This might change in the future.
+        NOTE: mutating activation function selection is now supported. However,
+              mutating Legendre polynomial coefficients directly is not implemented -
+              those can only change via gradient descent.
         """
 
         # Attempt to mutate the 'bias'
@@ -182,6 +182,34 @@ class NodeGene:
 
         elif r_perturb < perturb_prob + replace_prob:
             self.gain = random.uniform(self._config.min_gain, self._config.max_gain)
+
+        # Attempt to mutate the activation function (only for non-input nodes)
+        if self.type == NodeType.INPUT:
+            return
+
+        mutate_prob  = self._config.activation_mutate_prob
+        r_activation = random.random()
+        if r_activation < mutate_prob:
+
+            # Get available activation options from config
+            # Remove current activation to ensure we select a NEW activation
+            available_activations = self._config.activation_options.copy()
+            if self.activation_name in available_activations:
+                available_activations.remove(self.activation_name)
+
+            # Select random activation function
+            if available_activations:
+                new_activation = random.choice(available_activations)
+                self.activation_name = new_activation
+
+                if new_activation == 'legendre':
+                    self.activation_coeffs = np.random.normal(self._config.legendre_coeffs_init_mean,
+                                                              self._config.legendre_coeffs_init_stdev,
+                                                              self._config.num_legendre_coeffs)
+                    self.activation = None   # will be instantiated elsewhere
+                else:
+                    self.activation_coeffs = None
+                    self.activation = activations[new_activation]
 
     def __repr__(self):
         return (f"NodeGene(node_id={self.id:+03d}, node_type=NodeType.{self.type.name:6s},"
