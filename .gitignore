@@ -132,3 +132,4 @@ data/
 # Test files
 test_*.py
 test*.py
+coverage.json
