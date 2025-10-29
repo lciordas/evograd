@@ -146,7 +146,8 @@ class Individual:
         return pruned_individual
 
     def __str__(self):
-        return f"ID={self.ID}, fitness={self.fitness:.4f}\n{self.genome}"
+        fitness_str = f"{self.fitness:.4f}" if self.fitness is not None else "None"
+        return f"ID={self.ID}, fitness={fitness_str}\n{self.genome}"
 
     def __repr__(self):
         return f"Individual(genome={repr(self.genome)})"

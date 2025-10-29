@@ -79,7 +79,7 @@ class NodeGene:
             bias:              Bias value added to the node's weighted input
             gain:              Multiplier applied to the node's weighted input
             activation_name:   Name of activation function (e.g., 'tanh', 'relu', 'legendre')
-                               If None, uses value from 'config.activation'
+                               If None, uses value from 'config.activation_initial'
                                Special values: "random" (randomly select any activation),
                                                "random-fixed" (randomly select non-learnable activation)
             activation_coeffs: Coefficients for learnable activation functions
@@ -105,7 +105,7 @@ class NodeGene:
             self.activation        = None
         else:
             if activation_name is None:
-                activation_name = config.activation
+                activation_name = config.activation_initial
 
             # Handle "random" and "random-fixed" activation selection
             if activation_name == "random":

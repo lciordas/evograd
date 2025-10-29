@@ -164,7 +164,7 @@ class Genome:
         config = Config(config_file=None)
         config.num_inputs         = num_inputs
         config.num_outputs        = num_outputs
-        config.activation         = genome_dict.get("activation")
+        config.activation_initial = genome_dict.get("activation")
         config.initial_cxn_policy = "none"
 
         # Initialize InnovationTracker for this genome
@@ -297,7 +297,7 @@ class Genome:
                 "activation": node.activation_name
             }
             # Include node-specific activation if different from global or if no global activation
-            if node.activation_name != self._config.activation or self._config.activation is None:
+            if node.activation_name != self._config.activation_initial or self._config.activation_initial is None:
                 node_dict["activation"] = node.activation_name
             if node.activation_coeffs is not None:
                 node_dict["activation_coeffs"] = node.activation_coeffs.tolist()
@@ -313,7 +313,7 @@ class Genome:
                 "activation": node.activation_name
             }
             # Include node-specific activation if different from global or if no global activation
-            if node.activation_name != self._config.activation or self._config.activation is None:
+            if node.activation_name != self._config.activation_initial or self._config.activation_initial is None:
                 node_dict["activation"] = node.activation_name
             if node.activation_coeffs is not None:
                 node_dict["activation_coeffs"] = node.activation_coeffs.tolist()
@@ -334,8 +334,8 @@ class Genome:
             "nodes"      : nodes,
             "connections": connections
         }
-        if self._config.activation is not None:
-            result["activation"] = self._config.activation
+        if self._config.activation_initial is not None:
+            result["activation"] = self._config.activation_initial
 
         return result
 
