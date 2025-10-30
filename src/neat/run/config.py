@@ -13,8 +13,7 @@ class Config:
                          If None, creates an empty Config for manual attribute setting.
         """
 
-        # Empty config for testing/manual setup
-        # Set sensible defaults for parameter bounds (no clipping)
+        # Default config for testing/manual setup
         if config_file is None:
             self.min_weight = float('-inf')
             self.max_weight = float('inf')
@@ -22,6 +21,69 @@ class Config:
             self.max_bias   = float('inf')
             self.min_gain   = float('-inf')
             self.max_gain   = float('inf')
+
+            # Set defaults for initialization parameters
+            self.bias_init_mean    = 0.0
+            self.bias_init_stdev   = 1.0
+            self.gain_init_mean    = 0.0  # Match config file defaults
+            self.gain_init_stdev   = 1.0  # Match config file defaults
+            self.weight_init_mean  = 0.0
+            self.weight_init_stdev = 1.0
+
+            # Set defaults for mutation probabilities
+            self.bias_replace_prob       = 0.1
+            self.bias_perturb_prob       = 0.7
+            self.bias_perturb_strength   = 0.5
+            self.gain_replace_prob       = 0.0  # Disable gain mutation for numerical stability
+            self.gain_perturb_prob       = 0.0  # Disable gain mutation for numerical stability
+            self.gain_perturb_strength   = 0.0
+            self.weight_replace_prob     = 0.1
+            self.weight_perturb_prob     = 0.8
+            self.weight_perturb_strength = 0.5
+
+            # Set defaults for activation mutation
+            self.activation_mutate_prob = 0.0
+            self.activation_options = list(activations.keys())
+
+            # Set defaults for structural mutations
+            self.single_structural_mutation     = False
+            self.node_add_probability           = 0.2
+            self.node_delete_probability        = 0.0
+            self.connection_add_probability     = 0.5
+            self.connection_enable_probability  = 0.01
+            self.connection_disable_probability = 0.01
+            self.connection_delete_probability  = 0.0
+
+            # Set defaults for speciation
+            self.distance_excess_coeff   = 1.0
+            self.distance_disjoint_coeff = 1.0
+            self.distance_params_coeff   = 0.4
+            self.distance_includes_nodes = True
+            self.activation_distance_k   = 3.0
+
+            # Set defaults for reproduction/stagnation (needed for species management)
+            self.max_stagnation_period = 15
+            self.species_elitism = 2
+
+            # Set defaults for gradient descent (optional)
+            self.enable_gradient          = False
+            self.gradient_steps           = 10
+            self.learning_rate            = 0.01
+            self.gradient_frequency       = 1
+            self.gradient_selection       = 'top_k'
+            self.gradient_top_k           = 5
+            self.gradient_top_percent     = 0.1
+            self.lamarckian_evolution     = False
+            self.freeze_weights           = False
+            self.freeze_biases            = False
+            self.freeze_gains             = False
+            self.freeze_activation_coeffs = False
+
+            # Set defaults for Legendre (optional)
+            self.num_legendre_coeffs        = 10
+            self.legendre_coeffs_init_mean  = 0.0
+            self.legendre_coeffs_init_stdev = 1.0
+
             return
 
         if not os.path.exists(config_file):
