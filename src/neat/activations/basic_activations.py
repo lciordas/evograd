@@ -4,13 +4,16 @@ def identity_activation(z):
     return z
 
 def clamped_activation(z):
-    return np.maximum(-1.0, np.minimum(1.0, z))
+    return np.clip(z, -1.0, 1.0)
 
 def relu_activation(z):
     return np.maximum(0.0, z)
 
 def sigmoid_activation(z):
-    return 1.0 / (1.0 + np.exp(-z))
+    K = 10
+    Z = K * z
+    Z = np.clip(Z, -100, 100)   # to prevent under/overflow when calculating exp
+    return 1.0 / (1.0 + np.exp(-Z))
 
 def tanh_activation(z):
     return np.tanh(z)
