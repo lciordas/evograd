@@ -107,7 +107,13 @@ class Species:
     def update_fitness(self, fitness) -> None:
         """
         Update the species fitness with a new given value.
+        Treats NaN fitness as 0.0 (worst possible fitness for invalid networks).
         """
+        import math
+        # Treat NaN as 0 (invalid networks get worst fitness)
+        if math.isnan(fitness):
+            fitness = 0.0
+
         self.fitness = fitness
         if fitness > self.max_fitness:
             self.max_fitness   = fitness

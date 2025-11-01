@@ -38,7 +38,7 @@ Classes:
     SpeciesManager: Manages all species, handles speciation and reproduction coordination
 """
 
-from neat.run.config import Config
+import math
 from itertools  import count
 from statistics import mean
 from typing     import TYPE_CHECKING
@@ -46,7 +46,7 @@ from typing     import TYPE_CHECKING
 if TYPE_CHECKING:
     from neat.phenotype import Individual
     from neat.pool.population import Population
-
+from neat.run.config   import Config
 from neat.pool.species import Species
 
 class SpeciesManager:
@@ -294,19 +294,24 @@ class SpeciesManager:
         min_species_sz  = max(self._config.min_species_size, self._config.elitism)
 
         # Calculate total fitness across all species
-        total_fitness = sum(spec.fitness for spec in self.species.values())
+        # Treat NaN fitness as 0 (invalid networks get worst fitness)
+        total_fitness = sum(0.0 if math.isnan(spec.fitness) else spec.fitness
+                            for spec in self.species.values())
 
         # Allocate offspring proportionally to species fitness relative to total fitness
         allocations     = {}   # species ID => number of offspring
         total_allocated = 0
         for spec_id, spec in self.species.items():
 
-            # Proportional allocation based on fitness if total fitness > 0 
+            # Get fitness, treating NaN as 0
+            spec_fitness = 0.0 if math.isnan(spec.fitness) else spec.fitness
+
+            # Proportional allocation based on fitness if total fitness > 0
             # Equal allocation when all species have zero fitness (fitness cannot be negative)
             if total_fitness == 0:
                 num_offspring = int(self._config.population_size / len(self.species))
             else:
-                num_offspring = int(spec.fitness / total_fitness * self._config.population_size)
+                num_offspring = int(spec_fitness / total_fitness * self._config.population_size)
 
             # Enforce minimum species size
             num_offspring = max(num_offspring, min_species_sz)
@@ -319,7 +324,9 @@ class SpeciesManager:
         # we cannot adjust the population size perfectly.
         difference = self._config.population_size - total_allocated
         if difference != 0:
-            sorted_species = sorted(self.species.values(), key=lambda s: s.fitness, reverse=True)
+            sorted_species = sorted(self.species.values(),
+                                    key=lambda s: 0.0 if math.isnan(s.fitness) else s.fitness,
+                                    reverse=True)
             if sorted_species:
                 spec_id = sorted_species[0].id
                 allocations[spec_id] += difference
