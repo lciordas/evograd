@@ -4,6 +4,35 @@ from neat.activations import activations
 
 class Config:
 
+    @staticmethod
+    def _parse_activation_options(raw_options):
+        """
+        Parse activation_options from string to list.
+
+        Parameters:
+            raw_options: Either "all", "fixed", a comma-separated list, or already a list
+
+        Returns:
+            List of activation function names
+        """
+        # If already a list, return as-is
+        if isinstance(raw_options, list):
+            return raw_options
+
+        # Parse string values
+        if raw_options == 'all':
+            return list(activations.keys()) + ['legendre']
+        elif raw_options == 'fixed':
+            return list(activations.keys())  # excludes legendre
+        else:
+            # Parse comma-separated list
+            parsed = [opt.strip() for opt in raw_options.split(',')]
+            all_valid = list(activations.keys()) + ['legendre']
+            for opt in parsed:
+                if opt not in all_valid:
+                    raise ValueError(f"Invalid activation function '{opt}' in activation_options")
+            return parsed
+
     def __init__(self, config_file: str | None = None):
         """
         Initialize Config by parsing an INI file, or create an empty Config.
@@ -258,18 +287,7 @@ class Config:
         # Which activation functions are available for mutation.
         # Options: "all" (all activations), "fixed" (non-learnable only), or comma-separated list
         raw_options = get_value('NODE', 'activation_options', str, default='all')
-        if raw_options == 'all':
-            self.activation_options = list(activations.keys()) + ['legendre']
-        elif raw_options == 'fixed':
-            self.activation_options = list(activations.keys())  # excludes legendre
-        else:
-            # Parse comma-separated list
-            self.activation_options = [opt.strip() for opt in raw_options.split(',')]
-            # Validate that all options are valid
-            all_valid = list(activations.keys()) + ['legendre']
-            for opt in self.activation_options:
-                if opt not in all_valid:
-                    raise ValueError(f"Invalid activation function '{opt}' in activation_options")
+        self.activation_options = self._parse_activation_options(raw_options)
 
         # [CONNECTION]
 
@@ -369,4 +387,13 @@ class Config:
         # to initialize the Legendre polynomial coefficients for new nodes.
         self.legendre_coeffs_init_mean  = get_value('LEGENDRE', 'legendre_coeffs_init_mean' , float, default=0.0)
         self.legendre_coeffs_init_stdev = get_value('LEGENDRE', 'legendre_coeffs_init_stdev', float, default=1.0)
-    
+
+    def __setattr__(self, name, value):
+        """
+        Override 'setattr' to automatically parse activation_options when set.
+        This allows users to write config.activation_options = "fixed" and have it
+        automatically converted to the list of fixed activation names.
+        """
+        if name == 'activation_options':
+            value = self._parse_activation_options(value)
+        super().__setattr__(name, value)
