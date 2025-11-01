@@ -22,10 +22,14 @@ def sin_activation(z):
     return np.sin(z)
 
 def square_activation(z):
-    return z ** 2
+    # Clip input to avoid overflow (±1e154 squared stays within float64 range)
+    z_clipped = np.clip(z, -1e154, 1e154)
+    return z_clipped ** 2
 
 def cubed_activation(z):
-    return z ** 3
+    # Clip input to avoid overflow (±1e102 cubed stays within float64 range)
+    z_clipped = np.clip(z, -1e102, 1e102)
+    return z_clipped ** 3
 
 def log_activation(z):
     # Clip input to avoid log of non-positive values
