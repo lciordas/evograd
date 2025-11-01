@@ -15,6 +15,7 @@ Exported:
 
 from neat.activations.basic_activations import (
     activations,
+    activation_codes,
     identity_activation,
     clamped_activation,
     relu_activation,
@@ -32,6 +33,7 @@ from neat.activations.legendre_activation import LegendreActivation
 
 __all__ = [
     'activations',
+    'activation_codes',
     'identity_activation',
     'clamped_activation',
     'relu_activation',

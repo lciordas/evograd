@@ -14,7 +14,7 @@ import random
 from enum   import Enum
 from typing import Callable
 
-from neat.activations import activations, LegendreActivation
+from neat.activations import activations, activation_codes, LegendreActivation
 from neat.run.config  import Config
 
 class NodeType(Enum):
@@ -219,4 +219,6 @@ class NodeGene:
         if self.type == NodeType.INPUT:
             return f"[{self.type.value}{self.id}]"
         else:
-            return f"[{self.type.value}{self.id},b={self.bias:.2f},g={self.gain:.2f}]"
+            # Get the 3-letter activation code
+            act_code = activation_codes.get(self.activation_name, "???")
+            return f"[{self.type.value}{self.id},{act_code},b={self.bias:.2f},g={self.gain:.2f}]"

@@ -57,3 +57,20 @@ activations = {
     "exponential": exponential_activation,
     "abs"        : abs_activation
     }
+
+# 3-letter identifiers for each activation function
+activation_codes = {
+    "identity"   : "IDN",
+    "clamped"    : "CLP",
+    "relu"       : "RLU",
+    "sigmoid"    : "SIG",
+    "tanh"       : "TNH",
+    "sin"        : "SIN",
+    "square"     : "SQR",
+    "cubed"      : "CUB",
+    "log"        : "LOG",
+    "inverse"    : "INV",
+    "exponential": "EXP",
+    "abs"        : "ABS",
+    "legendre"   : "LEG"
+    }
