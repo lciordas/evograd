@@ -15,7 +15,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from neat.genotype import Genome
+from neat.genotype.node_gene import NodeType
 from neat.phenotype import Individual
+from neat.activations import activation_codes
 import graphviz
 
 
@@ -33,21 +35,27 @@ def visualize_genome(genome, output_file='network', format='png', view=True):
     dot.attr('node', shape='circle')
 
     # Add nodes
-    for node_id, node in genome.nodes.items():
-        if node.node_type == 'input':
+    for node_id, node in genome.node_genes.items():
+        if node.type == NodeType.INPUT:
             dot.node(str(node_id), label=f'In{node_id}', color='green', style='filled')
-        elif node.node_type == 'output':
-            dot.node(str(node_id), label=f'Out{node_id}', color='red', style='filled')
+        elif node.type == NodeType.OUTPUT:
+            # Get activation code for output nodes
+            act_code = activation_codes.get(node.activation_name, '???')
+            label = f'Out{node_id}\\n{act_code}'
+            dot.node(str(node_id), label=label, color='red', style='filled')
         else:
-            dot.node(str(node_id), label=str(node_id), color='lightblue', style='filled')
+            # Get activation code for hidden nodes
+            act_code = activation_codes.get(node.activation_name, '???')
+            label = f'{node_id}\\n{act_code}'
+            dot.node(str(node_id), label=label, color='lightblue', style='filled')
 
     # Add connections
-    for conn in genome.connections.values():
+    for conn in genome.conn_genes.values():
         if conn.enabled:
             weight = conn.weight
             color = 'blue' if weight > 0 else 'red'
             penwidth = str(min(abs(weight) * 2, 5))
-            dot.edge(str(conn.in_node), str(conn.out_node),
+            dot.edge(str(conn.node_in), str(conn.node_out),
                     label=f'{weight:.2f}', color=color, penwidth=penwidth)
 
     dot.render(output_file, view=view)

@@ -14,6 +14,8 @@ from collections import deque, defaultdict
 from typing      import Any, TYPE_CHECKING
 import graphviz  # type: ignore
 
+from neat.activations import activation_codes
+
 if TYPE_CHECKING:
     from neat.genotype import Genome
 
@@ -149,9 +151,9 @@ class NetworkBase(ABC):
 
         # Define node colors and shapes
         node_attrs = {
-            'INPUT':  {'fillcolor': 'lightgrey', 'color': 'black', 'style': 'filled', 'shape': 'circle', 'penwidth': '0.5', 'fontsize': '5', 'width': '0.5', 'height': '0.5', 'fixedsize': 'true'},
-            'HIDDEN': {'fillcolor': 'lightblue', 'color': 'black', 'style': 'filled', 'shape': 'circle', 'penwidth': '0.5', 'fontsize': '5', 'width': '0.5', 'height': '0.5', 'fixedsize': 'true'},
-            'OUTPUT': {'fillcolor': 'white'    , 'color': 'black', 'style': 'filled', 'shape': 'circle', 'penwidth': '0.5', 'fontsize': '5', 'width': '0.5', 'height': '0.5', 'fixedsize': 'true'}
+            'INPUT':  {'fillcolor': 'lightgrey', 'color': 'black', 'style': 'filled', 'shape': 'circle', 'penwidth': '0.5', 'fontsize': '5', 'width': '0.55', 'height': '0.55', 'fixedsize': 'true'},
+            'HIDDEN': {'fillcolor': 'lightblue', 'color': 'black', 'style': 'filled', 'shape': 'circle', 'penwidth': '0.5', 'fontsize': '5', 'width': '0.55', 'height': '0.55', 'fixedsize': 'true'},
+            'OUTPUT': {'fillcolor': 'white'    , 'color': 'black', 'style': 'filled', 'shape': 'circle', 'penwidth': '0.5', 'fontsize': '5', 'width': '0.55', 'height': '0.55', 'fixedsize': 'true'}
         }
 
         # Create subgraphs for better layout
@@ -171,7 +173,8 @@ class NetworkBase(ABC):
                 for node_id in sorted(hidden_nodes):
                     node_gene = self._genome.node_genes[node_id]
                     attrs = node_attrs[node_gene.type.name].copy()
-                    attrs['label'] = f"id={node_id}\\nbias={node_gene.bias:.2f}\ngain={node_gene.gain:.2f}"
+                    act_code = activation_codes.get(node_gene.activation_name, '???')
+                    attrs['label'] = f"id={node_id}\\n{act_code}\\nbias={node_gene.bias:.2f}\ngain={node_gene.gain:.2f}"
                     hidden_cluster.node(str(node_id), **attrs)
 
         with dot.subgraph(name='cluster_output') as output_cluster:
@@ -179,7 +182,8 @@ class NetworkBase(ABC):
             for node_id in sorted(self._output_ids):
                 node_gene = self._genome.node_genes[node_id]
                 attrs = node_attrs[node_gene.type.name].copy()
-                attrs['label'] = f"id={node_id}\\nbias={node_gene.bias:.2f}\ngain={node_gene.gain:.2f}"
+                act_code = activation_codes.get(node_gene.activation_name, '???')
+                attrs['label'] = f"id={node_id}\\n{act_code}\\nbias={node_gene.bias:.2f}\ngain={node_gene.gain:.2f}"
                 output_cluster.node(str(node_id), **attrs)
 
         # Add edges with weights (both enabled and disabled)
