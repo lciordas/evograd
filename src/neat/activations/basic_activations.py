@@ -28,17 +28,23 @@ def cubed_activation(z):
     return z ** 3
 
 def log_activation(z):
-    # Returns '-inf' if z=0.
-    return np.log(z)
+    # Clip input to avoid log of non-positive values
+    # Returns log(1e-7) ≈ -16.1 for z <= 0
+    z_safe = np.maximum(z, 1e-7)
+    return np.log(z_safe)
 
 def inverse_activation(z):
-    try:
-        return 1/z
-    except ZeroDivisionError:
-        return np.inf
+    # Avoid division by zero or very small values
+    # Returns 1e7 for z=0, and caps magnitude at 1e7 for |z| < 1e-7
+    z_safe = np.where(z == 0, 1e-7, z)
+    z_safe = np.where(np.abs(z_safe) < 1e-7, np.sign(z_safe) * 1e-7, z_safe)
+    return 1.0 / z_safe
 
 def exponential_activation(z):
-    return np.exp(z)
+    # Clip input to avoid overflow (exp(100) ≈ 2.7e43)
+    # and underflow (exp(-100) ≈ 3.7e-44)
+    z_clipped = np.clip(z, -100, 100)
+    return np.exp(z_clipped)
 
 def abs_activation(z):
     return np.abs(z)
