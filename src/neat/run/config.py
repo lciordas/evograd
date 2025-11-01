@@ -197,6 +197,17 @@ class Config:
         # Higher k makes the distance more sensitive to coefficient differences.
         self.activation_distance_k = get_value('SPECIATION', 'activation_distance_k', float, default=3.0)
 
+        # [FITNESS]
+
+        # Penalty coefficients applied as corrections to the example-specific fitness function.
+        # These encourage simpler networks by penalizing complexity. Set to 0.0 to disable.
+
+        # Penalty per node (beyond input/output nodes).
+        self.num_nodes_penalty = get_value('FITNESS', 'num_nodes_penalty', float, default=0.0)
+
+        # Penalty per enabled connection.
+        self.num_connections_penalty = get_value('FITNESS', 'num_connections_penalty', float, default=0.0)
+
         # [REPRODUCTION]
 
         # The number of most-fit individuals in each species that
