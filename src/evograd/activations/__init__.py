@@ -13,7 +13,7 @@ Exported:
     LegendreActivation: Learnable activation using Legendre polynomial basis
 """
 
-from neat.activations.basic_activations import (
+from evograd.activations.basic_activations import (
     activations,
     activation_codes,
     identity_activation,
@@ -29,7 +29,7 @@ from neat.activations.basic_activations import (
     exponential_activation,
     abs_activation
 )
-from neat.activations.legendre_activation import LegendreActivation
+from evograd.activations.legendre_activation import LegendreActivation
 
 __all__ = [
     'activations',

@@ -13,9 +13,9 @@ from pathlib import Path
 import autograd.numpy as np   # type: ignore
 import gymnasium as gym       # type: ignore
 
-from neat.run.config import Config
-from neat.phenotype  import Individual
-from neat.run        import Trial
+from evograd.run.config import Config
+from evograd.phenotype  import Individual
+from evograd.run        import Trial
 
 class Trial_Gymnasium(Trial):
     """

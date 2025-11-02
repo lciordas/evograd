@@ -23,10 +23,10 @@ Exported Classes:
     InnovationTracker: Global tracker for innovation numbers and node IDs
 """
 
-from neat.genotype.connection_gene    import ConnectionGene
-from neat.genotype.genome             import Genome
-from neat.genotype.innovation_tracker import InnovationTracker
-from neat.genotype.node_gene          import NodeType, NodeGene
+from evograd.genotype.connection_gene    import ConnectionGene
+from evograd.genotype.genome             import Genome
+from evograd.genotype.innovation_tracker import InnovationTracker
+from evograd.genotype.node_gene          import NodeType, NodeGene
 
 __all__ = ['ConnectionGene',
            'Genome',

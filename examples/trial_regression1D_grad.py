@@ -20,9 +20,9 @@ import autograd.numpy as np  # type: ignore
 from pathlib import Path
 from typing  import Callable, Tuple
 
-from neat.run.config     import Config
-from neat.run.trial_grad import TrialGrad
-from neat.run            import Experiment
+from evograd.run.config     import Config
+from evograd.run.trial_grad import TrialGrad
+from evograd.run            import Experiment
 
 class Trial_Regression1DGrad(TrialGrad):
     """

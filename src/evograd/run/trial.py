@@ -14,11 +14,11 @@ from joblib     import Parallel, delayed
 from statistics import mean
 from typing     import TYPE_CHECKING
 
-from neat.run.config                  import Config
-from neat.genotype.innovation_tracker import InnovationTracker
-from neat.pool                        import Population
+from evograd.run.config                  import Config
+from evograd.genotype.innovation_tracker import InnovationTracker
+from evograd.pool                        import Population
 if TYPE_CHECKING:
-    from neat.phenotype import Individual
+    from evograd.phenotype import Individual
 
 class Trial(ABC):
     """

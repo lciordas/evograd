@@ -13,7 +13,7 @@ Main components:
 - activations: Activation functions for neural networks
 
 Example:
-    >>> from neat import Config, Trial
+    >>> from evograd import Config, Trial
     >>> config = Config("config.ini")
     >>> class MyTrial(Trial):
     ...     def _evaluate_fitness(self, individual):
@@ -28,15 +28,15 @@ __author__ = "Your Name"
 __email__ = "your.email@example.com"
 
 # Import main classes for convenient access
-from neat.run.config import Config
-from neat.run.trial import Trial
-from neat.run.trial_grad import TrialGrad
-from neat.run.experiment import Experiment
-from neat.genotype.genome import Genome
-from neat.genotype.node_gene import NodeGene
-from neat.genotype.connection_gene import ConnectionGene
-from neat.phenotype.individual import Individual
-from neat.pool.population import Population
+from evograd.run.config import Config
+from evograd.run.trial import Trial
+from evograd.run.trial_grad import TrialGrad
+from evograd.run.experiment import Experiment
+from evograd.genotype.genome import Genome
+from evograd.genotype.node_gene import NodeGene
+from evograd.genotype.connection_gene import ConnectionGene
+from evograd.phenotype.individual import Individual
+from evograd.pool.population import Population
 
 __all__ = [
     "Config",

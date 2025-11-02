@@ -27,9 +27,9 @@ from pathlib    import Path
 from statistics import mean
 from typing     import Callable, List, Tuple, Optional
 
-from neat.run.config import Config
-from neat.phenotype  import Individual
-from neat.run        import Experiment, Trial
+from evograd.run.config import Config
+from evograd.phenotype  import Individual
+from evograd.run        import Experiment, Trial
 
 class Trial_RegressionND(Trial):
     """

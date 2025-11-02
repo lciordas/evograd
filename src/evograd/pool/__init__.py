@@ -19,9 +19,9 @@ Exported Classes:
     Population:     Top-level evolutionary coordinator
 """
 
-from neat.pool.species         import Species
-from neat.pool.species_manager import SpeciesManager
-from neat.pool.population      import Population
+from evograd.pool.species         import Species
+from evograd.pool.species_manager import SpeciesManager
+from evograd.pool.population      import Population
 
 __all__ = [
     'Species',

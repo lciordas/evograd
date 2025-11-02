@@ -13,11 +13,11 @@ from itertools import count
 from typing    import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from neat.genotype import Genome
-from neat.phenotype.network_base     import NetworkBase
-from neat.phenotype.network_autograd import NetworkAutograd
-from neat.phenotype.network_fast     import NetworkFast
-from neat.phenotype.network_standard import NetworkStandard
+    from evograd.genotype import Genome
+from evograd.phenotype.network_base     import NetworkBase
+from evograd.phenotype.network_autograd import NetworkAutograd
+from evograd.phenotype.network_fast     import NetworkFast
+from evograd.phenotype.network_standard import NetworkStandard
 
 class Individual:
     """

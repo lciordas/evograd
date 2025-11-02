@@ -15,7 +15,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from neat import Config
+from evograd import Config
 from examples.trial_XOR import XORTrial, XORExperiment
 from examples.trial_regression1D import RegressionTrial1D, RegressionExperiment1D
 from examples.trial_cartpole import CartPoleTrial, CartPoleExperiment

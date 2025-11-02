@@ -14,12 +14,12 @@ Classes:
 
 from typing import Callable, Optional, TYPE_CHECKING
 
-from neat.genotype.node_gene import NodeType  # Needed at runtime
+from evograd.genotype.node_gene import NodeType  # Needed at runtime
 
 if TYPE_CHECKING:
-    from neat.genotype import ConnectionGene, Genome, NodeGene
+    from evograd.genotype import ConnectionGene, Genome, NodeGene
 
-from neat.phenotype.network_base import NetworkBase
+from evograd.phenotype.network_base import NetworkBase
 
 class Connection:
     """

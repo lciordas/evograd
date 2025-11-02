@@ -14,8 +14,8 @@ import random
 from enum   import Enum
 from typing import Callable
 
-from neat.activations import activations, activation_codes, LegendreActivation
-from neat.run.config  import Config
+from evograd.activations import activations, activation_codes, LegendreActivation
+from evograd.run.config  import Config
 
 class NodeType(Enum):
     """

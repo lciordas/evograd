@@ -13,8 +13,8 @@ from joblib import Parallel, delayed
 from sys    import stdout
 from typing import Type
 
-from neat.run.config import Config
-from neat.run.trial  import Trial
+from evograd.run.config import Config
+from evograd.run.trial  import Trial
 
 class Experiment(ABC):
     """

@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "neat-python"
+name = "evograd"
 version = "0.1.0"
-description = "A Python implementation of NEAT (NeuroEvolution of Augmenting Topologies)"
+description = "EvoGrad: A Python implementation of NEAT (NeuroEvolution of Augmenting Topologies) with gradient descent extensions"
 readme = "README.md"
 authors = [
     {name = "Your Name", email = "your.email@example.com"},
@@ -25,7 +25,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
-keywords = ["neat", "neuroevolution", "genetic-algorithm", "neural-networks", "machine-learning"]
+keywords = ["evograd", "neat", "neuroevolution", "genetic-algorithm", "neural-networks", "machine-learning", "gradient-descent"]
 requires-python = ">=3.8"
 dependencies = [
     "numpy>=1.19.0",
@@ -53,16 +53,16 @@ examples = [
     "gymnasium>=0.26.0",
     "ipykernel>=6.0",
 ]
-all = ["neat-python[dev,examples]"]
+all = ["evograd[dev,examples]"]
 
 [project.urls]
-"Homepage" = "https://github.com/yourusername/neat-python"
-"Bug Reports" = "https://github.com/yourusername/neat-python/issues"
-"Source" = "https://github.com/yourusername/neat-python"
-"Documentation" = "https://neat-python.readthedocs.io/"
+"Homepage" = "https://github.com/yourusername/evograd"
+"Bug Reports" = "https://github.com/yourusername/evograd/issues"
+"Source" = "https://github.com/yourusername/evograd"
+"Documentation" = "https://evograd.readthedocs.io/"
 
 [project.scripts]
-neat-run = "neat.cli:main"
+evograd = "evograd.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -71,7 +71,7 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-neat = ["py.typed"]
+evograd = ["py.typed"]
 
 [tool.black]
 line-length = 100
@@ -100,7 +100,7 @@ warn_unused_ignores = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q --strict-markers --cov=neat --cov-report=term-missing"
+addopts = "-ra -q --strict-markers --cov=evograd --cov-report=term-missing"
 testpaths = [
     "tests",
 ]
@@ -109,7 +109,7 @@ python_classes = "Test*"
 python_functions = "test_*"
 
 [tool.coverage.run]
-source = ["src/neat"]
+source = ["src/evograd"]
 omit = [
     "*/tests/*",
     "*/test_*.py",

@@ -48,24 +48,24 @@ jobs:
 
     - name: Lint with flake8
       run: |
-        flake8 neat tests --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 neat tests --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+        flake8 evograd tests --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 evograd tests --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
 
     - name: Format check with black
       run: |
-        black --check neat tests
+        black --check evograd tests
 
     - name: Sort imports check with isort
       run: |
-        isort --check-only neat tests
+        isort --check-only evograd tests
 
     - name: Type check with mypy
       run: |
-        mypy neat --ignore-missing-imports
+        mypy evograd --ignore-missing-imports
 
     - name: Test with pytest
       run: |
-        pytest tests --cov=neat --cov-report=xml --cov-report=term
+        pytest tests --cov=evograd --cov-report=xml --cov-report=term
 
     - name: Upload coverage reports to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'

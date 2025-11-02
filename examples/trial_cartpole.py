@@ -55,9 +55,9 @@ Usage:
 import gymnasium as gym    # type: ignore
 from statistics import mean
 
-from neat.run.config import Config
+from evograd.run.config import Config
 from trial_gymbase   import Trial_Gymnasium
-from neat.phenotype import Individual
+from evograd.phenotype import Individual
 
 class Trial_CartPole(Trial_Gymnasium):
     """

@@ -27,11 +27,11 @@ Exported Classes:
     Neuron:          A computational node applying activation functions
 """
 
-from neat.phenotype.individual       import Individual
-from neat.phenotype.network_base     import NetworkBase
-from neat.phenotype.network_standard import Connection, Neuron, NetworkStandard
-from neat.phenotype.network_autograd import NetworkAutograd
-from neat.phenotype.network_fast     import NetworkFast
+from evograd.phenotype.individual       import Individual
+from evograd.phenotype.network_base     import NetworkBase
+from evograd.phenotype.network_standard import Connection, Neuron, NetworkStandard
+from evograd.phenotype.network_autograd import NetworkAutograd
+from evograd.phenotype.network_fast     import NetworkFast
 
 __all__ = ['Connection',
            'Neuron',

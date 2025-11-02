@@ -14,9 +14,9 @@ import random
 from copy   import deepcopy
 from typing import TYPE_CHECKING
 
-from neat.run.config import Config
+from evograd.run.config import Config
 if TYPE_CHECKING:
-    from neat.phenotype import Individual
+    from evograd.phenotype import Individual
 
 class Species:
     """

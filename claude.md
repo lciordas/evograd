@@ -4,7 +4,7 @@ This document contains guidelines and conventions for working on this project wi
 
 ## Project Overview
 
-This is a Python implementation of **NEAT** (NeuroEvolution of Augmenting Topologies), an evolutionary algorithm for evolving neural network topologies and parameters.
+EvoGrad is a Python implementation of **NEAT** (NeuroEvolution of Augmenting Topologies), an evolutionary algorithm for evolving neural network topologies and parameters.
 
 ### What is NEAT?
 
@@ -19,7 +19,7 @@ Key features of NEAT:
 
 ### This Implementation
 
-This codebase provides a comprehensive NEAT implementation with several enhancements:
+This codebase (EvoGrad) provides a comprehensive NEAT implementation with several enhancements:
 
 #### Core Architecture
 

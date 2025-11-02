@@ -16,8 +16,8 @@ import numpy as np
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from neat.genotype import Genome
-from neat.phenotype.network_base import NetworkBase
+    from evograd.genotype import Genome
+from evograd.phenotype.network_base import NetworkBase
 
 class NetworkFast(NetworkBase):
     """
@@ -89,7 +89,7 @@ class NetworkFast(NetworkBase):
         # Store activation functions by index for runtime use
         # Note: These functions are already vectorized (they use NumPy operations)
         # and work natively on arrays, so no np.vectorize wrapper is needed
-        from neat.activations import activations
+        from evograd.activations import activations
         self._activations = [activations.get(name, None) for name in activation_names]
 
         # Convert input/output IDs to indices

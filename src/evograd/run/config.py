@@ -1,6 +1,6 @@
 import configparser
 import os
-from neat.activations import activations
+from evograd.activations import activations
 
 class Config:
 

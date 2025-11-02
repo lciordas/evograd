@@ -53,9 +53,9 @@ import autograd.numpy as np  # type: ignore
 from pathlib    import Path
 from statistics import mean
 
-from neat.run.config import Config
-from neat.phenotype  import Individual
-from neat.run        import Experiment, Trial
+from evograd.run.config import Config
+from evograd.phenotype  import Individual
+from evograd.run        import Experiment, Trial
 
 class Trial_XOR(Trial):
     """

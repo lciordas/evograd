@@ -11,9 +11,9 @@ Classes:
 from itertools import count
 from typing    import TYPE_CHECKING
 
-from neat.run.config import Config
+from evograd.run.config import Config
 if TYPE_CHECKING:
-    from neat.genotype.connection_gene import ConnectionGene
+    from evograd.genotype.connection_gene import ConnectionGene
 
 class InnovationTracker:
     """

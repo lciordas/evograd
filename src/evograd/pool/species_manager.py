@@ -44,10 +44,10 @@ from statistics import mean
 from typing     import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from neat.phenotype import Individual
-    from neat.pool.population import Population
-from neat.run.config   import Config
-from neat.pool.species import Species
+    from evograd.phenotype import Individual
+    from evograd.pool.population import Population
+from evograd.run.config   import Config
+from evograd.pool.species import Species
 
 class SpeciesManager:
     """

@@ -4,8 +4,8 @@ Shared fixtures for integration tests.
 
 import pytest
 import numpy as np
-from neat.run.config import Config
-from neat.genotype import Genome
+from evograd.run.config import Config
+from evograd.genotype import Genome
 
 
 @pytest.fixture(autouse=True)
@@ -13,8 +13,8 @@ def set_random_seeds():
     """Set random seeds for reproducibility and reset global state."""
     import random
     from itertools import count
-    from neat.phenotype.individual import Individual
-    from neat.genotype.innovation_tracker import InnovationTracker
+    from evograd.phenotype.individual import Individual
+    from evograd.genotype.innovation_tracker import InnovationTracker
 
     # Set random seeds FIRST (before creating any objects that use random)
     # Using seed 42 for reproducibility

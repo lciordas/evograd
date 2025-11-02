@@ -10,7 +10,7 @@ Classes:
 
 import numpy as np
 import random
-from neat.run.config import Config
+from evograd.run.config import Config
 
 class ConnectionGene:
     """

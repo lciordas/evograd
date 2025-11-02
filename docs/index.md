@@ -1,6 +1,6 @@
-# NEAT Documentation
+# EvoGrad Documentation
 
-Welcome to the documentation for the NEAT (NeuroEvolution of Augmenting Topologies) Python library.
+Welcome to the documentation for EvoGrad, a Python implementation of NEAT (NeuroEvolution of Augmenting Topologies) with gradient descent extensions.
 
 ## Quick Links
 
@@ -22,21 +22,21 @@ NEAT is a genetic algorithm for evolving artificial neural networks. It was deve
 ## Installation
 
 ```bash
-pip install neat-python
+pip install evograd
 ```
 
 Or install from source:
 
 ```bash
-git clone https://github.com/yourusername/neat-python.git
-cd neat-python
+git clone https://github.com/yourusername/evograd.git
+cd evograd
 pip install -e .
 ```
 
 ## Quick Start
 
 ```python
-from neat import Config, Trial
+from evograd import Config, Trial
 
 class XORTrial(Trial):
     def _evaluate_fitness(self, individual):

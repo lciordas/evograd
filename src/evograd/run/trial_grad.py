@@ -20,9 +20,9 @@ from autograd.misc.optimizers import adam   # type: ignore
 from typing                   import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from neat.phenotype import Individual
-from neat.run.trial  import Trial
-from neat.run.config import Config
+    from evograd.phenotype import Individual
+from evograd.run.trial  import Trial
+from evograd.run.config import Config
 
 class TrialGrad(Trial):
     """

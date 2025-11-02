@@ -13,13 +13,13 @@ import autograd.numpy as np  # type: ignore
 import random
 from typing import TYPE_CHECKING
 
-from neat.run.config import Config
+from evograd.run.config import Config
 
 if TYPE_CHECKING:
-    from neat.genotype import Genome, ConnectionGene, InnovationTracker
-    from neat.phenotype import Individual
+    from evograd.genotype import Genome, ConnectionGene, InnovationTracker
+    from evograd.phenotype import Individual
 
-from neat.pool.species_manager import SpeciesManager
+from evograd.pool.species_manager import SpeciesManager
 
 class Population:
     """
@@ -47,8 +47,8 @@ class Population:
             network_type: Type of network backend to use ('standard', 'fast', 'autograd')
         """
         # Import here to avoid circular import
-        from neat.genotype import Genome
-        from neat.phenotype import Individual
+        from evograd.genotype import Genome
+        from evograd.phenotype import Individual
 
         self._config = config
         self._network_type = network_type
@@ -83,7 +83,7 @@ class Population:
         For each network, connect one random input node to all outputs nodes.
         """
         # Import here to avoid circular import
-        from neat.genotype import ConnectionGene, InnovationTracker
+        from evograd.genotype import ConnectionGene, InnovationTracker
 
         # Add connections to each Individual's network.
         for individual in self.individuals:
@@ -106,7 +106,7 @@ class Population:
         The connections are chosen at random.
         """
         # Import here to avoid circular import
-        from neat.genotype import ConnectionGene, InnovationTracker
+        from evograd.genotype import ConnectionGene, InnovationTracker
 
         # Add connections to each Individual's network.
         for individual in self.individuals:
@@ -130,7 +130,7 @@ class Population:
         For each network, connect all inputs nodes to all output nodes.
         """
         # Import here to avoid circular import
-        from neat.genotype import ConnectionGene, InnovationTracker
+        from evograd.genotype import ConnectionGene, InnovationTracker
 
         # Add connections to each Individual's network.
         for individual in self.individuals:

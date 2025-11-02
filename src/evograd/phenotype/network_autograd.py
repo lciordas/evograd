@@ -24,10 +24,10 @@ import autograd.numpy as np  # type: ignore
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from neat.genotype import Genome
-from neat.activations                     import activations
-from neat.activations.legendre_activation import LegendreActivation
-from neat.phenotype.network_base          import NetworkBase
+    from evograd.genotype import Genome
+from evograd.activations                     import activations
+from evograd.activations.legendre_activation import LegendreActivation
+from evograd.phenotype.network_base          import NetworkBase
 
 class NetworkAutograd(NetworkBase):
     """

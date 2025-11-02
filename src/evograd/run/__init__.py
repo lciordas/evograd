@@ -20,8 +20,8 @@ Exported Classes:
     Experiment:  Abstract base class for NEAT experiments (multi-trial runs)
 """
 
-from neat.run.config     import Config
-from neat.run.trial      import Trial
-from neat.run.experiment import Experiment
+from evograd.run.config     import Config
+from evograd.run.trial      import Trial
+from evograd.run.experiment import Experiment
 
 __all__ = ['Config','Trial','Experiment']

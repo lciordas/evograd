@@ -12,7 +12,7 @@ sys.path.insert(0, str(root_dir))
 @pytest.fixture
 def sample_config():
     """Provide a sample configuration for testing."""
-    from neat.run.config import Config
+    from evograd.run.config import Config
     # Return a minimal config for testing
     config_dict = {
         'POPULATION_INIT': {
@@ -30,8 +30,8 @@ def sample_config():
 @pytest.fixture
 def sample_genome():
     """Create a sample genome for testing."""
-    from neat.genotype.genome import Genome
-    from neat.genotype.innovation_tracker import InnovationTracker
+    from evograd.genotype.genome import Genome
+    from evograd.genotype.innovation_tracker import InnovationTracker
 
     tracker = InnovationTracker()
     genome = Genome(tracker=tracker)

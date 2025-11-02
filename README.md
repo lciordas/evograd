@@ -1,6 +1,6 @@
-# NEAT-Python
+# EvoGrad
 
-A complete Python implementation of NEAT (NeuroEvolution of Augmenting Topologies), a genetic algorithm for evolving artificial neural networks.
+EvoGrad: A Python implementation of NEAT (NeuroEvolution of Augmenting Topologies), a genetic algorithm for evolving artificial neural networks.
 
 ## Features
 
@@ -16,22 +16,22 @@ A complete Python implementation of NEAT (NeuroEvolution of Augmenting Topologie
 ### From PyPI (coming soon)
 
 ```bash
-pip install neat-python
+pip install evograd
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/neat-python.git
-cd neat-python
+git clone https://github.com/yourusername/evograd.git
+cd evograd
 pip install -e .
 ```
 
 ### Development Installation
 
 ```bash
-git clone https://github.com/yourusername/neat-python.git
-cd neat-python
+git clone https://github.com/yourusername/evograd.git
+cd evograd
 pip install -e ".[dev]"
 ```
 
@@ -40,7 +40,7 @@ pip install -e ".[dev]"
 ### Basic Usage
 
 ```python
-from neat import Config, Trial
+from evograd import Config, Trial
 
 class XORTrial(Trial):
     def _evaluate_fitness(self, individual):
@@ -76,7 +76,7 @@ trial.run(num_jobs=4)  # Use 4 cores for parallel evaluation
 ### Running Multiple Experiments
 
 ```python
-from neat import Experiment
+from evograd import Experiment
 
 class XORExperiment(Experiment):
     def _prepare_trial(self, trial, trial_number):
@@ -111,7 +111,7 @@ experiment.run(num_jobs_trials=4, num_jobs_fitness=2)
 ### Hybrid NEAT + Gradient Descent
 
 ```python
-from neat.run import TrialGrad
+from evograd.run import TrialGrad
 
 class RegressionTrialGrad(TrialGrad):
     def _evaluate_fitness(self, individual):
@@ -157,7 +157,7 @@ The `examples/` directory contains:
 
 ## Documentation
 
-Full documentation is available at [Read the Docs](https://neat-python.readthedocs.io/) (coming soon).
+Full documentation is available at [Read the Docs](https://evograd.readthedocs.io/) (coming soon).
 
 ## Testing
 
@@ -170,7 +170,7 @@ pytest tests/
 With coverage:
 
 ```bash
-pytest tests/ --cov=neat --cov-report=html
+pytest tests/ --cov=evograd --cov-report=html
 ```
 
 ## Contributing
@@ -188,11 +188,11 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 If you use this library in your research, please cite:
 
 ```bibtex
-@software{neat_python,
+@software{evograd,
   author = {Your Name},
-  title = {NEAT-Python: A Python Implementation of NEAT},
+  title = {EvoGrad: A Python Implementation of NEAT with Gradient Descent Extensions},
   year = {2024},
-  url = {https://github.com/yourusername/neat-python}
+  url = {https://github.com/yourusername/evograd}
 }
 ```
 

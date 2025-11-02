@@ -14,10 +14,10 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from neat.genotype import Genome
-from neat.genotype.node_gene import NodeType
-from neat.phenotype import Individual
-from neat.activations import activation_codes
+from evograd.genotype import Genome
+from evograd.genotype.node_gene import NodeType
+from evograd.phenotype import Individual
+from evograd.activations import activation_codes
 import graphviz
 
 

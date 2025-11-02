@@ -14,10 +14,10 @@ from collections import deque, defaultdict
 from typing      import Any, TYPE_CHECKING
 import graphviz  # type: ignore
 
-from neat.activations import activation_codes
+from evograd.activations import activation_codes
 
 if TYPE_CHECKING:
-    from neat.genotype import Genome
+    from evograd.genotype import Genome
 
 class NetworkBase(ABC):
     """

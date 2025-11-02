@@ -11,10 +11,10 @@ Classes:
 import copy
 import numpy as np
 import random
-from neat.run.config                  import Config
-from neat.genotype.connection_gene    import ConnectionGene
-from neat.genotype.innovation_tracker import InnovationTracker
-from neat.genotype.node_gene          import NodeType, NodeGene
+from evograd.run.config                  import Config
+from evograd.genotype.connection_gene    import ConnectionGene
+from evograd.genotype.innovation_tracker import InnovationTracker
+from evograd.genotype.node_gene          import NodeType, NodeGene
 
 class Genome:
     """
