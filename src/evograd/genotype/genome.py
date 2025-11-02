@@ -766,33 +766,52 @@ class Genome:
             return
         split_conn_gene = random.choice(enabled_conn_genes)
 
-        # The connection being split must be disabled.
+        # Disable the connection selected for splitting.
         split_conn_gene.enabled = False
 
         # From the global registry, get the ID for the new node and the
         # innovation numbers (connection IDs) for the two new connections
         new_node_id, innov1, innov2 = InnovationTracker.get_split_IDs(split_conn_gene)
 
-        # There are two possibilities:
-        # - the selected connection has been split before and this genome already 
-        #   contains the genes for the new node and and for the two new connections 
-        # - this genome does not contain the genes for the new node and the two new
-        #   connections (either the connection has never been split before, in any
-        #   genome, or it has been split, however the new structure has not been 
-        #   inherited by this genome)
-        # NOTE: We currently don't allow for a connection for be split multiple 
-        #       times (generating more than two paths connecting its endpoints).
+        # There are three possibilities:
+        #
+        # 1. the selected connection has been split before and this genome already
+        #    contains the genes for the new node and and for the two new connections
+        #
+        # 2. this genome does not contain the genes for the new node and the two new
+        #    connections (either the connection has never been split before, in any
+        #    genome, or it has been split, however the new structure has not been
+        #    inherited by this genome)
+        #
+        # 3. the selected connection has been split before, however one of the resulting
+        #    new connections was later deleted leaving the genome in a partial state
+
+        # Case 1
         has_new_genes = new_node_id in self.node_genes and \
                         innov1      in self.conn_genes and \
                         innov2      in self.conn_genes
 
+        # Case 2
         lacks_new_genes = new_node_id not in self.node_genes and \
                           innov1      not in self.conn_genes and \
                           innov2      not in self.conn_genes
 
-        assert (has_new_genes or lacks_new_genes)
+        # Case 3
+        partial_state = not (has_new_genes or lacks_new_genes)
 
-        # Add new genes to this genome.
+        # Reduce Case 3 => Case 2 by removing partial genes
+        if partial_state:
+            if new_node_id in self.node_genes:
+                del self.node_genes[new_node_id]
+            if innov1 in self.conn_genes:
+                del self.conn_genes[innov1]
+            if innov2 in self.conn_genes:
+                del self.conn_genes[innov2]
+            lacks_new_genes = True
+
+        # At this point we are either in Case 1 or Case 2.
+
+        # We're in Case 2, therefore add new genes to this genome.
         if lacks_new_genes:
 
             # Create the gene describing the new node (it is a hidden node)
@@ -807,8 +826,11 @@ class Genome:
             conn2 = ConnectionGene(new_node_id, split_conn_gene.node_out, split_conn_gene.weight, innov2, self._config)
             self.conn_genes[innov2] = conn2
 
-        # The genes resulting from the split are already part of the genome; since we
-        # disabled the split gene, the resulting two new connections should be enabled
+        # We're on Case 1. 
+        # Since we currently don't allow for a connection for be split multiple times
+        # (generating more than two paths connecting its endpoints), we do not add new
+        # genes, however since we disabled the connection selected for the split, the
+        # two connections replacing it must be enabled.
         else:
             self.conn_genes[innov1].enabled = True
             self.conn_genes[innov2].enabled = True
