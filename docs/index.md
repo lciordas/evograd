@@ -28,7 +28,7 @@ pip install evograd
 Or install from source:
 
 ```bash
-git clone https://github.com/yourusername/evograd.git
+git clone https://github.com/lciordas/evograd.git
 cd evograd
 pip install -e .
 ```

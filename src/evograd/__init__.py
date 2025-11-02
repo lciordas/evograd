@@ -24,8 +24,8 @@ Example:
 """
 
 __version__ = "0.1.0"
-__author__ = "Your Name"
-__email__ = "your.email@example.com"
+__author__ = "Lucas Ciordas"
+__email__ = "22lciordas@gmail.com"
 
 # Import main classes for convenient access
 from evograd.run.config import Config

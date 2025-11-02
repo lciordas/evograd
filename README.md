@@ -22,7 +22,7 @@ pip install evograd
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/evograd.git
+git clone https://github.com/lciordas/evograd.git
 cd evograd
 pip install -e .
 ```
@@ -30,7 +30,7 @@ pip install -e .
 ### Development Installation
 
 ```bash
-git clone https://github.com/yourusername/evograd.git
+git clone https://github.com/lciordas/evograd.git
 cd evograd
 pip install -e ".[dev]"
 ```
@@ -189,10 +189,10 @@ If you use this library in your research, please cite:
 
 ```bibtex
 @software{evograd,
-  author = {Your Name},
+  author = {Lucas Ciordas},
   title = {EvoGrad: A Python Implementation of NEAT with Gradient Descent Extensions},
   year = {2024},
-  url = {https://github.com/yourusername/evograd}
+  url = {https://github.com/lciordas/evograd}
 }
 ```
 
