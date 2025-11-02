@@ -68,6 +68,8 @@ venv.bak/
 
 # Claude Code
 .claude/
+CLAUDE.md
+claude.md
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -129,7 +131,7 @@ data/
 *.backup
 *~
 
-# Test files
-test_*.py
-test*.py
+# Temporary test files (only in root directory)
+/test_*.py
+/test*.py
 coverage.json
