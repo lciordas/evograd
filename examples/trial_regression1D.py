@@ -81,7 +81,8 @@ class Trial_Regression1D(Trial):
 
     def _evaluate_fitness(self, individual: Individual) -> float:
         """
-        Evaluate individual fitness by measuring function approximation error.
+        Evaluate individual fitness by measuring function approximation error
+        with a complexity penalty based on the number of nodes.
 
         Implementation depends on network_type:
         - 'standard':         Loop through all grid points individually (NUM_POINTS forward passes)
@@ -91,7 +92,7 @@ class Trial_Regression1D(Trial):
             individual: The individual to evaluate
 
         Returns:
-            Fitness score (higher is better, based on inverse MSE)
+            Fitness score (higher is better, based on inverse MSE with complexity penalty)
         """
 
         # Serial mode => process each grid point individually
@@ -105,8 +106,13 @@ class Trial_Regression1D(Trial):
         # Calculate mean squared error
         mse = np.mean((Os - self._Ys)**2)
 
-        # Fitness is inverse of (MSE + offset) to avoid division by zero
-        fitness = 1.0 / (0.1 + mse)
+        # Add complexity penalties based on network structure
+        complexity_penalty = \
+            (self._config.num_nodes_penalty       * individual._network.number_nodes_hidden +
+             self._config.num_connections_penalty * individual._network.number_connections)
+
+        # Fitness is inverse of (MSE + complexity penalty + offset)
+        fitness = 1.0 / (0.1 + mse + complexity_penalty)
 
         return fitness
 
