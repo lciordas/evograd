@@ -11,6 +11,7 @@ Main components:
 - pool: Population and speciation management
 - run: Trial execution, configuration, and experiment framework
 - activations: Activation functions for neural networks
+- optimization: Bayesian optimization for hyperparameter tuning
 
 Example:
     >>> from evograd import Config, Trial
@@ -38,6 +39,13 @@ from evograd.genotype.connection_gene import ConnectionGene
 from evograd.phenotype.individual import Individual
 from evograd.pool.population import Population
 
+# Import optimization components (optional, may require optuna)
+try:
+    from evograd.optimization import BayesianOptimizer, SearchSpace
+    _has_optimization = True
+except ImportError:
+    _has_optimization = False
+
 __all__ = [
     "Config",
     "Trial",
@@ -49,3 +57,7 @@ __all__ = [
     "Individual",
     "Population",
 ]
+
+# Add optimization components if available
+if _has_optimization:
+    __all__.extend(["BayesianOptimizer", "SearchSpace"])
