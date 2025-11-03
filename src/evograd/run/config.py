@@ -408,3 +408,102 @@ class Config:
         if name == 'activation_options':
             value = self._parse_activation_options(value)
         super().__setattr__(name, value)
+
+    def save(self, filepath: str):
+        """
+        Save the configuration to an INI file.
+
+        Args:
+            filepath: Path where to save the configuration file
+        """
+        import configparser
+        from pathlib import Path
+
+        parser = configparser.ConfigParser()
+
+        # POPULATION_INIT section
+        parser.add_section('POPULATION_INIT')
+        parser.set('POPULATION_INIT', 'population_size', str(self.population_size))
+        parser.set('POPULATION_INIT', 'num_inputs', str(self.num_inputs))
+        parser.set('POPULATION_INIT', 'num_outputs', str(self.num_outputs))
+
+        # SPECIATION section
+        parser.add_section('SPECIATION')
+        parser.set('SPECIATION', 'compatibility_threshold', str(self.compatibility_threshold))
+        parser.set('SPECIATION', 'distance_excess_coeff', str(self.distance_excess_coeff))
+        parser.set('SPECIATION', 'distance_disjoint_coeff', str(self.distance_disjoint_coeff))
+        parser.set('SPECIATION', 'distance_params_coeff', str(self.distance_params_coeff))
+        parser.set('SPECIATION', 'distance_includes_nodes', str(self.distance_includes_nodes).lower())
+        parser.set('SPECIATION', 'activation_distance_k', str(self.activation_distance_k))
+
+        # REPRODUCTION section
+        parser.add_section('REPRODUCTION')
+        parser.set('REPRODUCTION', 'elitism', str(self.elitism))
+        parser.set('REPRODUCTION', 'survival_threshold', str(self.survival_threshold))
+        parser.set('REPRODUCTION', 'min_species_size', str(self.min_species_size))
+
+        # STAGNATION section
+        parser.add_section('STAGNATION')
+        parser.set('STAGNATION', 'max_stagnation_period', str(self.max_stagnation_period))
+
+        # NODE section
+        parser.add_section('NODE')
+        parser.set('NODE', 'activation_initial', str(self.activation_initial))
+        parser.set('NODE', 'bias_init_mean', str(self.bias_init_mean))
+        parser.set('NODE', 'bias_init_stdev', str(self.bias_init_stdev))
+        parser.set('NODE', 'gain_init_mean', str(self.gain_init_mean))
+        parser.set('NODE', 'gain_init_stdev', str(self.gain_init_stdev))
+        parser.set('NODE', 'min_bias', str(self.min_bias))
+        parser.set('NODE', 'max_bias', str(self.max_bias))
+        parser.set('NODE', 'min_gain', str(self.min_gain))
+        parser.set('NODE', 'max_gain', str(self.max_gain))
+        parser.set('NODE', 'bias_replace_prob', str(self.bias_replace_prob))
+        parser.set('NODE', 'gain_replace_prob', str(self.gain_replace_prob))
+        parser.set('NODE', 'bias_perturb_prob', str(self.bias_perturb_prob))
+        parser.set('NODE', 'gain_perturb_prob', str(self.gain_perturb_prob))
+        parser.set('NODE', 'bias_perturb_strength', str(self.bias_perturb_strength))
+        parser.set('NODE', 'gain_perturb_strength', str(self.gain_perturb_strength))
+        parser.set('NODE', 'activation_mutate_prob', str(self.activation_mutate_prob))
+        # Convert activation_options list back to string
+        if isinstance(self.activation_options, list):
+            if self.activation_options == list(activations.keys()):
+                activation_str = 'all'
+            elif self.activation_options == ['sigmoid', 'tanh', 'relu']:
+                activation_str = 'fixed'
+            else:
+                activation_str = ', '.join(self.activation_options)
+        else:
+            activation_str = str(self.activation_options)
+        parser.set('NODE', 'activation_options', activation_str)
+
+        # CONNECTION section
+        parser.add_section('CONNECTION')
+        parser.set('CONNECTION', 'weight_init_mean', str(self.weight_init_mean))
+        parser.set('CONNECTION', 'weight_init_stdev', str(self.weight_init_stdev))
+        parser.set('CONNECTION', 'min_weight', str(self.min_weight))
+        parser.set('CONNECTION', 'max_weight', str(self.max_weight))
+        parser.set('CONNECTION', 'weight_replace_prob', str(self.weight_replace_prob))
+        parser.set('CONNECTION', 'weight_perturb_prob', str(self.weight_perturb_prob))
+        parser.set('CONNECTION', 'weight_perturb_strength', str(self.weight_perturb_strength))
+
+        # STRUCTURAL_MUTATIONS section
+        parser.add_section('STRUCTURAL_MUTATIONS')
+        parser.set('STRUCTURAL_MUTATIONS', 'single_structural_mutation', str(self.single_structural_mutation).lower())
+        parser.set('STRUCTURAL_MUTATIONS', 'node_add_probability', str(self.node_add_probability))
+        parser.set('STRUCTURAL_MUTATIONS', 'node_delete_probability', str(self.node_delete_probability))
+        parser.set('STRUCTURAL_MUTATIONS', 'connection_add_probability', str(self.connection_add_probability))
+        parser.set('STRUCTURAL_MUTATIONS', 'connection_enable_probability', str(self.connection_enable_probability))
+        parser.set('STRUCTURAL_MUTATIONS', 'connection_disable_probability', str(self.connection_disable_probability))
+        parser.set('STRUCTURAL_MUTATIONS', 'connection_delete_probability', str(self.connection_delete_probability))
+
+        # LEGENDRE section (if exists)
+        if hasattr(self, 'num_legendre_coeffs'):
+            parser.add_section('LEGENDRE')
+            parser.set('LEGENDRE', 'num_legendre_coeffs', str(self.num_legendre_coeffs))
+            parser.set('LEGENDRE', 'legendre_coeffs_init_mean', str(self.legendre_coeffs_init_mean))
+            parser.set('LEGENDRE', 'legendre_coeffs_init_stdev', str(self.legendre_coeffs_init_stdev))
+
+        # Write to file
+        Path(filepath).parent.mkdir(parents=True, exist_ok=True)
+        with open(filepath, 'w') as f:
+            parser.write(f)
