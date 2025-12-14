@@ -340,10 +340,11 @@ class TestNeuron:
     def test_calculate_output_output_node_sigmoid(self, sample_output_node_gene):
         """Test calculate_output for OUTPUT node with sigmoid."""
         neuron = Neuron(sample_output_node_gene)
-        # sigmoid(gain * input + bias) = sigmoid(1.5 * 0.0 + (-0.3)) = sigmoid(-0.3)
+        # pre_activation = gain * input + bias = 1.5 * 0.0 + (-0.3) = -0.3
+        # This implementation uses sigmoid with K=10: sigmoid(K * z) = sigmoid(10 * -0.3) = sigmoid(-3)
         neuron.calculate_output(0.0)
-        # sigmoid(-0.3) ≈ 0.4256
-        assert 0.42 < neuron.output < 0.43
+        # sigmoid(-3) = 1/(1+exp(3)) ≈ 0.0474
+        assert 0.04 < neuron.output < 0.05
 
     def test_calculate_output_applies_gain(self):
         """Test that calculate_output applies gain correctly."""

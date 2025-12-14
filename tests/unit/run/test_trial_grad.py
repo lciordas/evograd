@@ -461,7 +461,7 @@ class TestTrialGradGDOptimize:
         mock_network.forward_pass = Mock(return_value=np.array([[0.5], [0.6], [0.7], [0.8], [0.9]]))
         mock_individual._network = mock_network
 
-        with patch('neat.run.trial_grad.adam', return_value=np.concatenate([weights.flatten(), biases.flatten(), gains.flatten()])):
+        with patch('evograd.run.trial_grad.adam', return_value=np.concatenate([weights.flatten(), biases.flatten(), gains.flatten()])):
             results = trial._GD_optimize(mock_individual)
 
         required_keys = [
@@ -491,7 +491,7 @@ class TestTrialGradGDOptimize:
         mock_network.forward_pass = Mock(return_value=np.array([[0.5], [0.6], [0.7], [0.8], [0.9]]))
         mock_individual._network = mock_network
 
-        with patch('neat.run.trial_grad.adam') as mock_adam:
+        with patch('evograd.run.trial_grad.adam') as mock_adam:
             mock_adam.return_value = np.concatenate([weights.flatten(), biases.flatten(), gains.flatten()])
             trial._GD_optimize(mock_individual)
 
@@ -522,7 +522,7 @@ class TestTrialGradEvaluateFitnessAll:
         trial._population = mock_population
 
         # Mock parent's _evaluate_fitness_all
-        with patch('neat.run.trial.Trial._evaluate_fitness_all') as mock_parent:
+        with patch('evograd.run.trial.Trial._evaluate_fitness_all') as mock_parent:
             trial._evaluate_fitness_all(num_jobs=1)
 
             # Should call parent method
@@ -544,7 +544,7 @@ class TestTrialGradEvaluateFitnessAll:
         mock_population._species_manager.update_fitness = Mock()
         trial._population = mock_population
 
-        with patch('neat.run.trial.Trial._evaluate_fitness_all'):
+        with patch('evograd.run.trial.Trial._evaluate_fitness_all'):
             trial._evaluate_fitness_all(num_jobs=1)
 
             # Should not apply gradient descent
@@ -585,8 +585,8 @@ class TestTrialGradEvaluateFitnessAll:
         mock_population._species_manager.update_fitness = Mock()
         trial._population = mock_population
 
-        with patch('neat.run.trial.Trial._evaluate_fitness_all'):
-            with patch('neat.run.trial_grad.adam', return_value=np.array([1.0, 0.5, 1.0])):
+        with patch('evograd.run.trial.Trial._evaluate_fitness_all'):
+            with patch('evograd.run.trial_grad.adam', return_value=np.array([1.0, 0.5, 1.0])):
                 trial._evaluate_fitness_all(num_jobs=1)
 
         # Should have applied gradient descent to top 2 individuals
@@ -621,8 +621,8 @@ class TestTrialGradEvaluateFitnessAll:
         mock_population._species_manager.update_fitness = Mock()
         trial._population = mock_population
 
-        with patch('neat.run.trial.Trial._evaluate_fitness_all'):
-            with patch('neat.run.trial_grad.adam', return_value=np.array([1.0, 0.5, 1.0])):
+        with patch('evograd.run.trial.Trial._evaluate_fitness_all'):
+            with patch('evograd.run.trial_grad.adam', return_value=np.array([1.0, 0.5, 1.0])):
                 trial._evaluate_fitness_all(num_jobs=1)
 
         # Should have called save_parameters_to_genome
@@ -657,8 +657,8 @@ class TestTrialGradEvaluateFitnessAll:
         mock_population._species_manager.update_fitness = Mock()
         trial._population = mock_population
 
-        with patch('neat.run.trial.Trial._evaluate_fitness_all'):
-            with patch('neat.run.trial_grad.adam', return_value=np.array([1.0, 0.5, 1.0])):
+        with patch('evograd.run.trial.Trial._evaluate_fitness_all'):
+            with patch('evograd.run.trial_grad.adam', return_value=np.array([1.0, 0.5, 1.0])):
                 trial._evaluate_fitness_all(num_jobs=1)
 
         # Should NOT have called save_parameters_to_genome
@@ -735,8 +735,8 @@ class TestTrialGradIntegration:
         mock_population._species_manager.update_fitness = Mock()
         trial._population = mock_population
 
-        with patch('neat.run.trial.Trial._evaluate_fitness_all'):
-            with patch('neat.run.trial_grad.adam', return_value=np.array([1.5, 2.5, 0.6, 1.1])):
+        with patch('evograd.run.trial.Trial._evaluate_fitness_all'):
+            with patch('evograd.run.trial_grad.adam', return_value=np.array([1.5, 2.5, 0.6, 1.1])):
                 trial._evaluate_fitness_all(num_jobs=1)
 
         # Should have updated individual's fitness

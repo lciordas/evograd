@@ -1,5 +1,5 @@
 """
-Unit tests for neat.run.trial module.
+Unit tests for evograd.run.trial module.
 
 This module contains comprehensive tests for the Trial class,
 which is the abstract base class for NEAT trials.
@@ -212,7 +212,7 @@ class TestTrialEvaluateFitnessAll:
         trial._population = mock_population
 
         # Mock Parallel to avoid actual parallelization
-        with patch('neat.run.trial.Parallel') as mock_parallel:
+        with patch('evograd.run.trial.Parallel') as mock_parallel:
             mock_parallel.return_value = MagicMock(return_value=[10.0, 20.0, 30.0])
 
             trial._evaluate_fitness_all(num_jobs=2)
