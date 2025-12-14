@@ -74,6 +74,8 @@ claude.md
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb
+!examples/**/*.ipynb
+examples/tmp/
 
 # IPython
 profile_default/
