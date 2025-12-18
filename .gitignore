@@ -133,6 +133,9 @@ data/
 *.backup
 *~
 
+# Scratchpad
+scratchpad/
+
 # Temporary test files (only in root directory)
 /test_*.py
 /test*.py
